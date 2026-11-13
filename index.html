@@ -274,9 +274,14 @@ const firebaseConfig = {
   messagingSenderId: "1026963459245",
   appId: "1:1026963459245:web:6a5aeaed0afd8ade37ca24"
 };
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
-const auth = firebase.auth();
+// Eigene Firebase-Instanz unter eigenem Namen. Management, Reading und dieses
+// Dashboard liegen alle auf elektrains.github.io, und Firebase legt die
+// Anmeldung pro Herkunft UND App-Name ab. Ohne eigenen Namen landete die
+// anonyme Anmeldung von hier im selben Speicher wie der Projektleiter-Login
+// der Management-App — die hielt sie dann faelschlich fuer einen Login.
+const app = firebase.initializeApp(firebaseConfig, "werkstatt-dashboard");
+const db = app.database();
+const auth = app.auth();
 
 const PFAD_AUFGABEN = 'werkstattAufgaben';
 const PFAD_INFO = 'infoboard';
