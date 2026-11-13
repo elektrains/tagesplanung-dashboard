@@ -44,7 +44,7 @@ JETZT AKTIV
         "teilnehmer": {
           "$name": {
             ".write": "auth != null",
-            ".validate": "newData.isNumber() || newData.val() == null"
+            ".validate": "newData.val() == null || newData.isNumber() || (newData.hasChild('ts') && newData.child('ts').isNumber())"
           }
         }
       }
@@ -77,7 +77,10 @@ werkstattAufgaben/$aufgabe/erledigt und /erledigtAm
 
 infoboard/$eintrag/teilnehmer/$name
   Die zweite und letzte Stelle fuer den Bildschirm: wer sich fuer einen
-  Anlass eintraegt, schreibt nur seinen eigenen Namen in die Liste. Titel,
+  Anlass eintraegt, schreibt seinen Namen und die Antworten auf die Fragen
+  der Mitteilung (Partner ja/nein, welche Tage, Halbtax).
+  Die Pruefung laesst beides zu: den blossen Zeitstempel aus der ersten
+  Fassung und die neue Form mit ts und antworten. Titel,
   Text und Datum der Mitteilung bleiben gesperrt, neue Mitteilungen anlegen
   oder loeschen geht vom Bildschirm aus nicht.
 

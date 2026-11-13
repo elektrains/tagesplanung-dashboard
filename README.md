@@ -41,6 +41,15 @@ Mitteilung kann eine Anmeldeliste haben; dann tippt jeder am Bildschirm seinen
 Namen an. Mitteilungen mit "Anzeigen bis" verschwinden nach dem Datum von
 selbst.
 
+**Eigene Fragen je Mitteilung.** Zu einer Anmeldeliste lassen sich Fragen
+stellen — "Partner kommt mit" als Ja/Nein, "Welche Tage" als Auswahl
+Fr–So / Fr+Sa / nur Sa, "Halbtax", "Skiabo nötig". Wer sich einträgt,
+beantwortet sie mit grossen Knöpfen. Auf dem Board steht darunter die Summe:
+*Partner kommt mit: Ja 7 · Nein 5* — das, was man zum Reservieren braucht.
+
+Jede Frage behält intern ihre Kennung, auch wenn der Text später geändert
+wird. Sonst verlören bereits gegebene Antworten ihren Bezug.
+
 ## Was bedient werden kann
 
 Drei Knöpfe: `‹`, `Heute`, `›`. Der Plan selbst lässt sich nicht ändern — es

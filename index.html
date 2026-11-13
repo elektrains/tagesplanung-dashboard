@@ -116,6 +116,23 @@ body{
 .kopf-name{font-size:calc(12px * var(--s));white-space:nowrap;writing-mode:vertical-rl;
   transform:rotate(180deg);max-height:calc(82px * var(--s));overflow:hidden;}
 .kopf-punkt{width:calc(8px * var(--s));height:calc(8px * var(--s));border-radius:50%;}
+/* Logo sitzt in der ersten Kopfzelle, ueber dem Wort "Baustelle". Die Zelle
+   ist ohnehin hoch, weil die Mitarbeiternamen senkrecht stehen. */
+.sp-bau-inner{display:flex;flex-direction:column;align-items:flex-start;justify-content:space-between;
+  height:calc(92px * var(--s));padding:calc(6px * var(--s)) 0 calc(8px * var(--s));}
+.plan-logo{height:calc(38px * var(--s));width:auto;display:block;border-radius:calc(3px * var(--s));}
+
+/* ===== Fragen zur Anmeldung ===== */
+.frage{margin-bottom:calc(14px * var(--s));}
+.frage-label{font-size:calc(13px * var(--s));font-weight:700;margin-bottom:calc(6px * var(--s));}
+.frage-opts{display:flex;gap:calc(8px * var(--s));flex-wrap:wrap;}
+.opt{background:var(--bg3);border:calc(2px * var(--s)) solid var(--border);color:var(--text2);
+  cursor:pointer;padding:calc(10px * var(--s)) calc(18px * var(--s));border-radius:var(--radius);
+  font-size:calc(13px * var(--s));font-weight:600;min-height:calc(46px * var(--s));}
+.opt.sel{background:var(--accent);border-color:var(--accent);color:#fff;}
+.dialog-fuss{display:flex;justify-content:space-between;gap:calc(8px * var(--s));flex-shrink:0;}
+.dialog-koerper{overflow-y:auto;margin-bottom:calc(14px * var(--s));}
+.aus{display:flex;gap:calc(5px * var(--s));flex-wrap:wrap;margin-top:calc(6px * var(--s));}
 /* ===== Aufgaben ===== */
 .auf{display:flex;align-items:flex-start;gap:calc(12px * var(--s));
   padding:calc(9px * var(--s)) calc(12px * var(--s));border-radius:var(--radius);
@@ -242,9 +259,9 @@ body{
 <div class="overlay" id="overlay">
   <div class="dialog">
     <div class="dialog-titel" id="dialogTitel"></div>
-    <div class="dialog-sub">Namen antippen zum An- und Abmelden.</div>
-    <div class="namen-gitter" id="namenGitter"></div>
-    <div class="dialog-fuss"><button class="knopf" onclick="dialogSchliessen()">Fertig</button></div>
+    <div class="dialog-sub" id="dialogSub"></div>
+    <div class="dialog-koerper" id="dialogKoerper"></div>
+    <div class="dialog-fuss" id="dialogFuss"></div>
   </div>
 </div>
 
@@ -300,7 +317,9 @@ let state = {
   infos: {},
   basisSkala: 1.6,
   schreibenGesperrt: null,
-  offenerInfo: null        // Eintrag, dessen Namensauswahl gerade offen ist
+  offenerInfo: null,       // Eintrag, dessen Namensauswahl gerade offen ist
+  offenerName: null,       // Name, dessen Fragen gerade ausgefüllt werden
+  entwurf: null            // Antworten, solange sie nicht gespeichert sind
 };
 
 // ===== Hilfen =====
@@ -415,7 +434,7 @@ function listenerStarten(){
   db.ref(PFAD_INFO).on('value',s=>{
     state.infos=s.val()||{};
     zeichneInfo();
-    if(state.offenerInfo) namenGitterFuellen();   // offene Auswahl mitziehen
+    if(state.offenerInfo && !state.offenerName) namenGitterFuellen();
     passeAnHoehe();
   });
   db.ref('.info/connected').on('value',s=>setzeOnline(!!s.val()));
@@ -464,7 +483,7 @@ function zeichnePlan(){
   }).join('');
 
   el.innerHTML=`<table class="plan-table">
-    <thead><tr><th class="sp-bau">Baustelle</th><th class="sp-fz">Fahrzeug</th>${kopf}</tr></thead>
+    <thead><tr><th class="sp-bau"><div class="sp-bau-inner"><img class="plan-logo" src="logo.jpg" alt="Elektra Ins AG"><span>Baustelle</span></div></th><th class="sp-fz">Fahrzeug</th>${kopf}</tr></thead>
     <tbody>${zeilen}</tbody></table>`;
   planAnpassen();
 }
@@ -554,7 +573,6 @@ function infoSichtbar(i){
   const heute=dateKey(new Date());
   return !i.bis || i.bis >= heute;     // abgelaufene blenden sich selbst aus
 }
-function teilnehmer(i){return Object.keys(i.teilnehmer||{});}
 
 function zeichneInfo(){
   const el=document.getElementById('infoListe'); if(!el)return;
@@ -567,12 +585,13 @@ function zeichneInfo(){
   if(liste.length===0){el.innerHTML='';return;}
 
   el.innerHTML=liste.map(([id,i])=>{
-    const t=teilnehmer(i);
+    const t=tnNamen(i), aus=auswertung(i);
     const anmeldung = i.anmeldung ? `<div class="info-anmeldung">
         <button class="knopf" onclick="namenAuswahl('${id}')">An- / Abmelden</button>
         <span class="chip">${t.length} angemeldet</span>
         <div class="info-namen">${t.map(n=>`<span class="chip person">${esc(n)}</span>`).join('')}</div>
-      </div>` : '';
+      </div>
+      ${aus.length?`<div class="aus">${aus.map(a=>`<span class="chip">${esc(a.label)}: ${esc(a.text)}</span>`).join('')}</div>`:''}` : '';
     return `<div class="info">
       <div class="info-kopf">
         <span class="info-titel">${esc(i.titel||'')}</span>
@@ -584,40 +603,131 @@ function zeichneInfo(){
   }).join('');
 }
 
+// Eine Mitteilung kann eigene Fragen tragen — "Partner ja/nein", "welche Tage",
+// "Halbtax". Ohne Fragen bleibt es beim einfachen Antippen des Namens.
+function felderVon(i){return Array.isArray(i&&i.felder)?i.felder:[];}
+function tnDaten(i,name){
+  const v=(i.teilnehmer||{})[schluessel(name)];
+  if(v==null)return null;
+  if(typeof v==='number')return {ts:v,antworten:{}};   // alte Eintraege ohne Fragen
+  return {ts:v.ts||0,antworten:v.antworten||{}};
+}
+function tnNamen(i){return Object.keys(i.teilnehmer||{});}
+
+// Fuer die Wand zaehlt nicht die Einzelantwort, sondern die Summe: wie viele
+// mit Partner, wie viele brauchen ein Skiabo.
+function auswertung(i){
+  const fs=felderVon(i); if(!fs.length)return [];
+  const alle=Object.values(i.teilnehmer||{});
+  return fs.map(f=>{
+    const z={};
+    alle.forEach(v=>{
+      const a=(v&&typeof v==='object'&&v.antworten)?v.antworten[f.id]:null;
+      if(a)z[a]=(z[a]||0)+1;
+    });
+    const teile=Object.entries(z).map(([k,c])=>k+' '+c);
+    return teile.length?{label:f.label,text:teile.join(' · ')}:null;
+  }).filter(Boolean);
+}
+
 function namenAuswahl(id){
   if(state.schreibenGesperrt){meldung('Nicht möglich – '+state.schreibenGesperrt,'err');return;}
-  state.offenerInfo=id;
+  state.offenerInfo=id; state.offenerName=null; state.entwurf=null;
   const i=(state.infos||{})[id]; if(!i)return;
   document.getElementById('dialogTitel').textContent=i.titel||'Anmeldung';
   namenGitterFuellen();
   document.getElementById('overlay').classList.add('on');
 }
+
 function namenGitterFuellen(){
   const id=state.offenerInfo; if(!id)return;
   const i=(state.infos||{})[id]; if(!i){dialogSchliessen();return;}
-  const drin=new Set(teilnehmer(i));
   const leute=aktiveMitarbeiter(dateKey(new Date()));
-  document.getElementById('namenGitter').innerHTML=leute.map(n=>
-    `<button class="name-knopf${drin.has(n)?' drin':''}" onclick="anmeldungUmschalten('${esc(n).replace(/'/g,"\\'")}')">${esc(n)}</button>`
-  ).join('');
+  const mitFragen=felderVon(i).length>0;
+  document.getElementById('dialogSub').textContent = mitFragen
+    ? 'Namen antippen, dann die Fragen beantworten.'
+    : 'Namen antippen zum An- und Abmelden.';
+  document.getElementById('dialogKoerper').innerHTML =
+    '<div class="namen-gitter">'+leute.map(nm=>{
+      const d=tnDaten(i,nm);
+      return '<button class="name-knopf'+(d?' drin':'')+'" onclick="nameGewaehlt(\''+esc(nm).replace(/'/g,"\\'")+'\')">'+esc(nm)+'</button>';
+    }).join('')+'</div>';
+  document.getElementById('dialogFuss').innerHTML =
+    '<span></span><button class="knopf" onclick="dialogSchliessen()">Fertig</button>';
 }
-function dialogSchliessen(){
-  state.offenerInfo=null;
-  document.getElementById('overlay').classList.remove('on');
+
+function nameGewaehlt(name){
+  const i=(state.infos||{})[state.offenerInfo]; if(!i)return;
+  const fs=felderVon(i);
+  if(!fs.length){ anmeldungUmschalten(name); return; }   // ohne Fragen wie bisher
+  const d=tnDaten(i,name);
+  state.offenerName=name;
+  state.entwurf=Object.assign({}, d?d.antworten:{});
+  // Vorbelegen, damit nie eine Frage unbeantwortet gespeichert wird
+  fs.forEach(f=>{ if(!state.entwurf[f.id]) state.entwurf[f.id]=optionenVon(f)[0]; });
+  fragenZeigen();
 }
+
+function optionenVon(f){
+  if(f.typ==='auswahl'&&Array.isArray(f.optionen)&&f.optionen.length)return f.optionen;
+  return ['Ja','Nein'];
+}
+
+function fragenZeigen(){
+  const i=(state.infos||{})[state.offenerInfo]; if(!i)return;
+  const name=state.offenerName, d=tnDaten(i,name);
+  document.getElementById('dialogSub').textContent=name+' – bitte ausfüllen';
+  document.getElementById('dialogKoerper').innerHTML=felderVon(i).map(f=>{
+    const opts=optionenVon(f).map(o=>
+      '<button class="opt'+(state.entwurf[f.id]===o?' sel':'')+'" onclick="antwortSetzen(\''+esc(f.id)+'\',\''+esc(o).replace(/'/g,"\\'")+'\')">'+esc(o)+'</button>'
+    ).join('');
+    return '<div class="frage"><div class="frage-label">'+esc(f.label)+'</div><div class="frage-opts">'+opts+'</div></div>';
+  }).join('');
+  document.getElementById('dialogFuss').innerHTML =
+    (d ? '<button class="knopf leise" onclick="abmelden()">Abmelden</button>' : '<button class="knopf leise" onclick="namenGitterFuellen()">Zurück</button>')
+    + '<button class="knopf" onclick="anmeldungSpeichern()">Speichern</button>';
+}
+
+function antwortSetzen(fid,wert){
+  if(!state.entwurf)return;
+  state.entwurf[fid]=wert;
+  fragenZeigen();
+}
+
 // Firebase-Schlüssel dürfen . $ # [ ] / nicht enthalten — Namen wie "Reto B."
 // würden den Pfad sprengen, deshalb vorher ersetzen.
 function schluessel(name){return name.replace(/[.$#\[\]\/]/g,'_');}
+
+function anmeldungSpeichern(){
+  const id=state.offenerInfo, name=state.offenerName;
+  if(!id||!name)return;
+  db.ref(PFAD_INFO+'/'+id+'/teilnehmer/'+schluessel(name)).set({ts:Date.now(),antworten:state.entwurf||{}})
+    .then(()=>{meldung(name+' angemeldet','ok');namenGitterFuellen();})
+    .catch(e=>meldung('Nicht gespeichert: '+e.message,'err'));
+}
+
+function abmelden(){
+  const id=state.offenerInfo, name=state.offenerName;
+  if(!id||!name)return;
+  db.ref(PFAD_INFO+'/'+id+'/teilnehmer/'+schluessel(name)).set(null)
+    .then(()=>{meldung(name+' abgemeldet','ok');namenGitterFuellen();})
+    .catch(e=>meldung('Nicht gespeichert: '+e.message,'err'));
+}
+
+// Mitteilungen ohne Fragen: Antippen meldet an und wieder ab.
 function anmeldungUmschalten(name){
   const id=state.offenerInfo; if(!id)return;
   const i=(state.infos||{})[id]; if(!i)return;
-  const k=schluessel(name);
-  const drin=!!(i.teilnehmer||{})[k];
-  db.ref(PFAD_INFO+'/'+id+'/teilnehmer/'+k).set(drin?null:Date.now())
+  const drin=!!tnDaten(i,name);
+  db.ref(PFAD_INFO+'/'+id+'/teilnehmer/'+schluessel(name)).set(drin?null:{ts:Date.now(),antworten:{}})
     .then(()=>meldung(drin?name+' abgemeldet':name+' angemeldet','ok'))
     .catch(e=>meldung('Nicht gespeichert: '+e.message,'err'));
 }
 
+function dialogSchliessen(){
+  state.offenerInfo=null; state.offenerName=null; state.entwurf=null;
+  document.getElementById('overlay').classList.remove('on');
+}
 // ===== Zeichnen =====
 function zeichne(){
   zeichnePlan();
