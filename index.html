@@ -533,8 +533,24 @@ function start(){
       document.getElementById('appShell').style.display = 'grid';
       render();
       if (state.schreibenGesperrt) setOnlyView();
+      else ueberwacheAnmeldung();
     });
 }
+// Verliert der Bildschirm seine anonyme Anmeldung — weil das Konto in Firebase
+// aufgeräumt wurde oder das Token abgelaufen ist — meldet er sich von selbst
+// neu an. Ohne das schlüge das Abhaken irgendwann stumm fehl, und niemand käme
+// auf den Zusammenhang. Wird erst nach der ersten Anmeldung eingehängt, sonst
+// feuert der Listener sofort mit "kein Nutzer" und meldet doppelt an.
+function ueberwacheAnmeldung(){
+  auth.onAuthStateChanged(user => {
+    if (user || state.schreibenGesperrt) return;
+    auth.signInAnonymously().catch(e => {
+      state.schreibenGesperrt = e.message;
+      setOnlyView();
+    });
+  });
+}
+
 function setOnlyView(){
   const lbl = document.getElementById('syncLabel');
   if (lbl) lbl.textContent = 'Nur Ansicht';

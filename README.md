@@ -42,7 +42,7 @@ stehen Projektaufgaben, hier Hausarbeiten.
 1. **Anonyme Anmeldung aktivieren** — Firebase-Konsole → Authentication →
    Sign-in method → Anonym. Ohne das zeigt der Bildschirm „Nur Ansicht" und das
    Abhaken ist gesperrt; der Plan erscheint trotzdem.
-2. **Datenbankregeln** — siehe `firebase-regeln-vorschlag.txt`.
+2. **Datenbankregeln** — siehe `firebase-regeln.txt` (am 13.11.2026 eingespielt).
 3. **Auf dem Display** — URL Launcher öffnen und die Adresse der App eintragen.
    Je nach Firmware: *App Management → Install Custom App* (Tizen 6.5+) oder
    *URL Launcher → Install Web App*. Steht der URL Launcher nicht zur Auswahl,

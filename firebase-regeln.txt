@@ -1,0 +1,92 @@
+Realtime-Database-Regeln
+========================
+Projekt: elektra-tagesplanung-23b62
+Eingespielt am 13.11.2026, Abhaken auf dem Wandbildschirm verifiziert.
+
+
+VORHER
+------
+{
+  "rules": {
+    ".read": true,
+    ".write": "auth != null"
+  }
+}
+
+Das Problem damit: sobald die anonyme Anmeldung aktiviert ist, erfüllt jeder
+anonyme Besucher "auth != null". Wer die Dashboard-Adresse von der Wand
+abliest, hätte Schreibrechte auf den ganzen Baum gehabt — Tagesplan,
+Kontrollen, Service-Abos, Einstellungen.
+
+
+JETZT AKTIV
+-----------
+{
+  "rules": {
+    ".read": true,
+    ".write": "auth != null && auth.token.firebase.sign_in_provider != 'anonymous'",
+
+    "werkstattAufgaben": {
+      "$aufgabe": {
+        "erledigt": {
+          ".write": "auth != null",
+          ".validate": "newData.isBoolean()"
+        },
+        "erledigtAm": {
+          ".write": "auth != null",
+          ".validate": "newData.isNumber() || newData.val() == null"
+        }
+      }
+    }
+  }
+}
+
+
+WAS DIE ZEILEN TUN
+------------------
+.read: true
+  Bleibt offen. Reading-App und Dashboard haben keinen Login und brauchen das.
+
+.write mit sign_in_provider != 'anonymous'
+  Schreiben nur nach Anmeldung mit Passwort, also aus der Management-App.
+  Anonyme Konten kommen hier nicht durch.
+
+werkstattAufgaben/$aufgabe/erledigt und /erledigtAm
+  Die einzige Stelle, an die der Wandbildschirm schreiben darf. In der
+  Realtime Database darf eine Regel weiter unten erlauben, was weiter oben
+  verweigert wird — deshalb wirkt diese Ausnahme trotz der strengeren Zeile
+  darüber. Titel, Beschreibung, Termin und Zuweisung bleiben gesperrt, neue
+  Aufgaben anlegen oder löschen geht vom Bildschirm aus nicht.
+
+.validate
+  newData.isBoolean() lässt bei "erledigt" nur wahr oder falsch zu.
+  Bei "erledigtAm" nur eine Zahl oder das Löschen des Felds (beim
+  Zurücknehmen eines Hakens).
+
+
+WARUM DIE UMSTELLUNG NICHTS BRECHEN KONNTE
+------------------------------------------
+Zum Zeitpunkt der Umstellung war die anonyme Anmeldung noch nicht aktiviert,
+es gab also keine anonymen Konten. Für alle bestehenden Apps war die neue
+Regel damit wortgleich mit der alten. Erst danach wurde "Anonym" eingeschaltet.
+
+Reihenfolge war: Regeln veröffentlichen -> Apps antesten -> Anonym aktivieren.
+So entsteht kein Moment, in dem anonyme Konten existieren und noch die alte,
+weite Regel gilt.
+
+
+HINWEIS ZUR ANONYMEN ANMELDUNG
+------------------------------
+"Automatische Bereinigung" ist bewusst AUS. Sie würde anonyme Konten nach
+30 Tagen löschen; das Konto des Wandbildschirms wäre dann weg und das Abhaken
+schlüge fehl, bis jemand die Seite neu lädt. Bei einer Handvoll Geräten ist
+das Aufräumen ohnehin unnötig.
+
+Die Dashboard-App meldet sich zusätzlich von selbst neu an, falls sie ihre
+Anmeldung doch einmal verliert (onAuthStateChanged in index.html).
+
+
+FALLS ETWAS KLEMMT
+------------------
+Die Konsole führt unter Realtime Database -> Regeln eine Versionshistorie.
+Die vorherige Fassung lässt sich mit zwei Klicks zurückholen.
