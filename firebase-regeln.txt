@@ -3,6 +3,19 @@ Realtime-Database-Regeln
 Projekt: elektra-tagesplanung-23b62
 Eingespielt am 13.11.2026, Abhaken auf dem Wandbildschirm verifiziert.
 
+OFFEN - der Block unten ist noch NICHT veroeffentlicht
+------------------------------------------------------
+Geaendert hat sich allein die .validate-Zeile unter
+infoboard/$eintrag/teilnehmer/$name: ein Teilnehmer ist nicht mehr nur ein
+Zeitstempel, sondern traegt seine Antworten auf die Fragen der Mitteilung.
+Am 13.11.2026 nachgemessen: eine Anmeldung mit Antworten wird derzeit mit
+PERMISSION_DENIED abgewiesen. Bis der Block veroeffentlicht ist, kann sich
+niemand fuer eine Mitteilung mit Fragen eintragen.
+
+Konsole -> Realtime Database -> Regeln -> Block ersetzen -> Veroeffentlichen.
+Die alte Form (blosser Zeitstempel) bleibt erlaubt, die bestehenden
+Anmeldungen zum Weihnachtsessen gehen also nicht verloren.
+
 
 VORHER
 ------
@@ -19,8 +32,8 @@ abliest, hätte Schreibrechte auf den ganzen Baum gehabt — Tagesplan,
 Kontrollen, Service-Abos, Einstellungen.
 
 
-JETZT AKTIV
------------
+SOLL-ZUSTAND (dieser Block gehoert in die Konsole)
+--------------------------------------------------
 {
   "rules": {
     ".read": true,

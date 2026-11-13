@@ -328,6 +328,14 @@ function getDayPlan(d){return state.plans[dateKey(d)]||{sites:[],globalStatus:{}
 function istHeute(){return dateKey(state.selectedDate)===dateKey(new Date());}
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function fmtDatum(iso){if(!iso)return '';const [y,m,t]=iso.split('-');return t+'.'+m+'.'+y;}
+// Mehrtaegige Anlaesse: "12.–14.03.2027" im gleichen Monat, sonst beide Daten ganz
+function fmtZeitraum(i){
+  const a=(i&&i.datum)||'', b=(i&&i.datumBis)||'';
+  if(!a)return fmtDatum(b);
+  if(!b||b<=a)return fmtDatum(a);
+  const [ya,ma,da]=a.split('-'), [yb,mb]=b.split('-');
+  return (ya===yb&&ma===mb) ? da+'.–'+fmtDatum(b) : fmtDatum(a)+' – '+fmtDatum(b);
+}
 
 // Ein-/Austritt wie im Management: ausgetretene und noch nicht eingetretene ausblenden
 function empDates(e){return (state.employeeDates||{})[e]||{};}
@@ -586,7 +594,9 @@ function zeichneInfo(){
 
   el.innerHTML=liste.map(([id,i])=>{
     const t=tnNamen(i), aus=auswertung(i);
-    const anmeldung = i.anmeldung ? `<div class="info-anmeldung">
+    // Wer Fragen stellt, will Antworten: eine Mitteilung mit Fragen bekommt
+    // die Namensliste auch dann, wenn der Haken beim Erfassen fehlte.
+    const anmeldung = (i.anmeldung || felderVon(i).length) ? `<div class="info-anmeldung">
         <button class="knopf" onclick="namenAuswahl('${id}')">An- / Abmelden</button>
         <span class="chip">${t.length} angemeldet</span>
         <div class="info-namen">${t.map(n=>`<span class="chip person">${esc(n)}</span>`).join('')}</div>
@@ -595,7 +605,7 @@ function zeichneInfo(){
     return `<div class="info">
       <div class="info-kopf">
         <span class="info-titel">${esc(i.titel||'')}</span>
-        ${i.datum?`<span class="chip">${fmtDatum(i.datum)}</span>`:''}
+        ${(i.datum||i.datumBis)?`<span class="chip">${fmtZeitraum(i)}</span>`:''}
       </div>
       ${i.text?`<div class="info-text">${esc(i.text)}</div>`:''}
       ${anmeldung}
