@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vorschau – Werkstatt-Dashboard im Hochformat</title>
+<style>
+/* Zeigt das Dashboard in der Grösse des gedrehten 55-Zöllers (1080 × 1920)
+   und rechnet es auf das Browserfenster herunter. So lässt sich am Laptop
+   beurteilen, wie es an der Wand aussehen wird. */
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:#0b0d12;color:#9aa0b8;font-family:system-ui,sans-serif;
+  min-height:100vh;display:flex;flex-direction:column;align-items:center;gap:14px;padding:16px;}
+.kopf{text-align:center;max-width:70ch;}
+.kopf h1{font-size:16px;color:#e8eaf0;font-weight:700;margin-bottom:4px;}
+.kopf p{font-size:12px;line-height:1.6;}
+.regler{display:flex;align-items:center;gap:10px;font-size:12px;}
+.regler input{width:180px;}
+.rahmen{position:relative;border:2px solid #2a2f45;border-radius:10px;overflow:hidden;
+  box-shadow:0 10px 40px rgba(0,0,0,.6);background:#0f1117;flex-shrink:0;}
+iframe{width:1080px;height:1920px;border:0;transform-origin:top left;display:block;}
+.mass{font-size:11px;color:#6b7291;text-align:center;}
+a{color:#cc1418;}
+</style>
+</head>
+<body>
+
+<div class="kopf">
+  <h1>Werkstatt-Dashboard – Vorschau im Hochformat</h1>
+  <p>So sieht es auf dem gedrehten Samsung QM55B-T aus: 1080 × 1920 Pixel,
+     68,5 cm breit und 121,8 cm hoch. Unten verkleinert dargestellt – die
+     Proportionen stimmen, die Schrift ist in Wirklichkeit entsprechend grösser.</p>
+</div>
+
+<div class="regler">
+  <label for="z">Darstellungsgrösse</label>
+  <input type="range" id="z" min="20" max="70" value="38" oninput="setzen(this.value)">
+  <span id="zWert">38 %</span>
+</div>
+
+<div class="rahmen" id="rahmen">
+  <iframe id="frame" src="./?scale=1.6" title="Dashboard im Hochformat"></iframe>
+</div>
+
+<div class="mass" id="mass"></div>
+
+<script>
+const B = 1080, H = 1920;
+function setzen(p){
+  const k = p / 100;
+  const f = document.getElementById('frame');
+  f.style.transform = 'scale(' + k + ')';
+  const r = document.getElementById('rahmen');
+  r.style.width  = Math.round(B * k) + 'px';
+  r.style.height = Math.round(H * k) + 'px';
+  document.getElementById('zWert').textContent = p + ' %';
+  // Wie gross ein Zentimeter auf dem echten Schirm hier dargestellt wird
+  document.getElementById('mass').textContent =
+    '1080 × 1920 px · auf dem Gerät 68,5 × 121,8 cm · hier auf ' + p + ' % verkleinert';
+}
+// Beim Start so wählen, dass es ins Fenster passt
+const start = Math.max(20, Math.min(70, Math.floor((innerHeight - 220) / H * 100)));
+document.getElementById('z').value = start;
+setzen(start);
+</script>
+</body>
+</html>
