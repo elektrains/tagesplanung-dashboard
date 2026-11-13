@@ -282,7 +282,32 @@ function isHiddenEmpAsOf(emp,refKey){
     try { const v = localStorage.getItem('dashScale'); if (v) s = parseFloat(v); } catch(e){}
   }
   if (s && !isNaN(s)) document.documentElement.style.setProperty('--s', String(s));
+  state.basisSkala = s && !isNaN(s) ? s : 1.6;
 })();
+
+// Ein Wandbildschirm wird nicht gescrollt. Passen an einem Tag mehr Baustellen
+// auf den Plan als auf den Schirm, wird die ganze Darstellung so weit
+// verkleinert, bis alles sichtbar ist — lieber etwas kleiner als unten
+// abgeschnitten, denn eine abgeschnittene Zeile fällt niemandem auf.
+// An einem ruhigen Tag geht es wieder auf die eingestellte Grösse hoch.
+// Weil alles linear mit --s skaliert, genügt eine kurze Korrekturschleife.
+function passeAnHoehe(){
+  const wurzel = document.documentElement;
+  wurzel.style.setProperty('--s', String(state.basisSkala));
+  // Mit etwas Reserve rechnen: der Aufgabenbereich ist in vh bemessen und
+  // schrumpft nicht mit, darum trifft die lineare Schätzung knapp daneben.
+  for (let i = 0; i < 8; i++) {
+    const wrap = document.querySelector('.plan-wrap');
+    if (!wrap) return;
+    const ueber = wrap.scrollHeight - wrap.clientHeight;   // erzwingt Neuberechnung
+    if (ueber <= 1) return;
+    const jetzt = parseFloat(getComputedStyle(wurzel).getPropertyValue('--s'));
+    const neu = Math.max(0.5, jetzt * (innerHeight - 10) / (innerHeight + ueber));
+    if (neu >= jetzt || neu <= 0.5) { wurzel.style.setProperty('--s', String(Math.max(0.5, neu))); return; }
+    wurzel.style.setProperty('--s', String(neu));
+  }
+}
+addEventListener('resize', () => passeAnHoehe());
 
 // ===== Verbindungsanzeige =====
 let offlineSeit = null;
@@ -344,7 +369,10 @@ function setupListeners(){
     }
     render();
   });
-  db.ref(AUFGABEN_PFAD).on('value', snap => { state.aufgaben = snap.val() || {}; renderAufgaben(); });
+  // Nach dem Zeichnen die Höhe nachrechnen: trifft die Aufgabenliste erst
+  // nach dem Plan ein, verschiebt sie das Layout und die Anpassung von vorhin
+  // stimmt nicht mehr.
+  db.ref(AUFGABEN_PFAD).on('value', snap => { state.aufgaben = snap.val() || {}; renderAufgaben(); passeAnHoehe(); });
   db.ref('.info/connected').on('value', snap => setOnline(!!snap.val()));
 }
 
@@ -500,6 +528,7 @@ function render(){
   renderMiniCal();
   renderPlan();
   renderAufgaben();
+  passeAnHoehe();
   // Nach jedem Neuzeichnen steht der Hinweis-Container neu da
   if (!istHeute()) beruehrt(); else zeigeHinweis(null);
 }
