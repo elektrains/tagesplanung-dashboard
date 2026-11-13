@@ -37,6 +37,17 @@ JETZT AKTIV
           ".validate": "newData.isNumber() || newData.val() == null"
         }
       }
+    },
+
+    "infoboard": {
+      "$eintrag": {
+        "teilnehmer": {
+          "$name": {
+            ".write": "auth != null",
+            ".validate": "newData.isNumber() || newData.val() == null"
+          }
+        }
+      }
     }
   }
 }
@@ -63,6 +74,12 @@ werkstattAufgaben/$aufgabe/erledigt und /erledigtAm
   Bei "erledigtAm" nur eine Zahl oder das Löschen des Felds (beim
   Zurücknehmen eines Hakens).
 
+
+infoboard/$eintrag/teilnehmer/$name
+  Die zweite und letzte Stelle fuer den Bildschirm: wer sich fuer einen
+  Anlass eintraegt, schreibt nur seinen eigenen Namen in die Liste. Titel,
+  Text und Datum der Mitteilung bleiben gesperrt, neue Mitteilungen anlegen
+  oder loeschen geht vom Bildschirm aus nicht.
 
 WARUM DIE UMSTELLUNG NICHTS BRECHEN KONNTE
 ------------------------------------------
