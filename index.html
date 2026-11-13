@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Elektra Ins – Werkstatt-Dashboard</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg:#0f1117;--bg2:#1a1d27;--bg3:#22263a;--bg4:#2a2f45;
+  --border:rgba(255,255,255,0.08);--border2:rgba(255,255,255,0.15);
+  --text:#e8eaf0;--text2:#9aa0b8;--text3:#6b7291;
+  --accent:#cc1418;--accent2:#a50f12;--accent-glow:rgba(204,20,24,0.2);
+  --green:#22c55e;--yellow:#eab308;--red:#ef4444;--blue:#3b82f6;
+  --green-bg:rgba(34,197,94,0.20);--yellow-bg:rgba(234,179,8,0.60);
+  --red-bg:rgba(239,68,68,0.60);--blue-bg:rgba(59,130,246,0.60);
+  --radius:8px;--radius-lg:12px;
+  /* Alles skaliert über diesen Faktor. Auf dem 55-Zöller aus ein paar Metern
+     Abstand ist 1.6 ein guter Startwert; feinjustieren ohne neuen Build über
+     die Adresse, z.B. ...?scale=1.9 — der Wert bleibt im Gerät gespeichert. */
+  --s:1.6;
+}
+html,body{height:100%;overflow:hidden;}
+body{
+  font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text);
+  font-size:calc(13px * var(--s));
+  /* Auf einem Kiosk darf nichts markiert oder weggewischt werden */
+  user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent;
+  overscroll-behavior:none;
+}
+.shell{display:grid;grid-template-rows:calc(58px * var(--s)) 1fr;height:100vh;overflow:hidden;}
+
+/* ===== Kopfzeile ===== */
+.topbar{background:#111318;border-bottom:calc(2px * var(--s)) solid var(--accent);display:flex;align-items:center;padding:0 calc(16px * var(--s));gap:0;}
+.app-title{font-size:calc(13px * var(--s));font-weight:700;color:var(--text2);letter-spacing:.5px;text-transform:uppercase;line-height:1.3;}
+.app-title span{display:block;font-size:calc(10px * var(--s));font-weight:400;color:var(--text3);text-transform:uppercase;letter-spacing:1px;}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:calc(10px * var(--s));}
+.clock{font-size:calc(15px * var(--s));font-weight:700;color:var(--text);letter-spacing:.5px;font-variant-numeric:tabular-nums;}
+.sync-status{display:flex;align-items:center;gap:calc(6px * var(--s));padding:calc(5px * var(--s)) calc(12px * var(--s));border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);font-size:calc(12px * var(--s));color:var(--text2);}
+.sync-dot{width:calc(8px * var(--s));height:calc(8px * var(--s));border-radius:50%;background:var(--text3);flex-shrink:0;transition:background .3s;}
+.sync-dot.online{background:var(--green);box-shadow:0 0 calc(6px * var(--s)) var(--green);}
+.sync-dot.offline{background:var(--red);}
+
+/* ===== Grundraster: links Kalender, rechts Plan oben / Aufgaben unten ===== */
+.body{display:grid;grid-template-columns:calc(220px * var(--s)) 1fr;overflow:hidden;height:100%;}
+.sidebar{background:var(--bg2);border-right:1px solid var(--border);overflow:hidden;padding:calc(16px * var(--s)) calc(12px * var(--s));}
+.main{display:grid;grid-template-rows:auto minmax(0,1fr) auto;overflow:hidden;}
+
+/* ===== Seitenleiste ===== */
+.sidebar-section{margin-bottom:calc(20px * var(--s));}
+.sidebar-label{font-size:calc(10px * var(--s));font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text3);padding:0 calc(8px * var(--s));margin-bottom:calc(8px * var(--s));}
+.mini-cal{background:var(--bg3);border-radius:var(--radius);padding:calc(10px * var(--s));}
+.mini-cal-header{display:flex;align-items:center;justify-content:center;margin-bottom:calc(8px * var(--s));}
+.mini-cal-title{font-weight:600;font-size:calc(12px * var(--s));}
+.mini-cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;text-align:center;}
+.mini-cal-dow{font-size:calc(9px * var(--s));color:var(--text3);padding:calc(2px * var(--s)) 0;font-weight:600;}
+.mini-cal-day{font-size:calc(11px * var(--s));padding:calc(4px * var(--s)) calc(2px * var(--s));border-radius:calc(4px * var(--s));color:var(--text2);}
+.mini-cal-day.today{background:rgba(204,20,24,.2);color:var(--accent);font-weight:700;}
+.mini-cal-day.selected{background:var(--accent);color:#fff;font-weight:700;}
+.mini-cal-day.empty{visibility:hidden;}
+.mini-cal-day.has-data{position:relative;}
+.mini-cal-day.has-data::after{content:'';position:absolute;bottom:1px;left:50%;transform:translateX(-50%);width:calc(3px * var(--s));height:calc(3px * var(--s));border-radius:50%;background:var(--green);}
+.legend-item{display:flex;align-items:center;gap:calc(8px * var(--s));padding:calc(5px * var(--s)) calc(8px * var(--s));border-radius:var(--radius);font-size:calc(12px * var(--s));color:var(--text2);}
+.legend-dot{width:calc(10px * var(--s));height:calc(10px * var(--s));border-radius:2px;flex-shrink:0;}
+
+/* ===== Tageskopf ===== */
+.day-header{background:var(--bg2);border-bottom:1px solid var(--border);padding:calc(14px * var(--s)) calc(24px * var(--s));display:flex;align-items:center;gap:calc(16px * var(--s));}
+.day-nav-btn{background:var(--bg3);border:1px solid var(--border);color:var(--text2);cursor:pointer;
+  padding:calc(8px * var(--s)) calc(18px * var(--s));border-radius:var(--radius);font-size:calc(16px * var(--s));
+  min-width:calc(48px * var(--s));min-height:calc(44px * var(--s));transition:all .15s;}
+.day-nav-btn:active{background:var(--accent);border-color:var(--accent);color:#fff;}
+.day-nav-btn.today-btn{font-size:calc(12px * var(--s));}
+.day-title{font-size:calc(16px * var(--s));font-weight:700;letter-spacing:-.3px;}
+.day-subtitle{font-size:calc(12px * var(--s));color:var(--text3);}
+/* Hinweis, dass gleich auf heute zurückgesprungen wird */
+.back-hint{margin-left:auto;display:none;align-items:center;gap:calc(8px * var(--s));
+  font-size:calc(11px * var(--s));color:var(--text3);background:var(--bg3);
+  border:1px solid var(--border2);border-radius:var(--radius);padding:calc(6px * var(--s)) calc(12px * var(--s));}
+.back-hint.on{display:flex;}
+
+/* ===== Plantabelle ===== */
+.plan-wrap{padding:calc(16px * var(--s)) calc(24px * var(--s));overflow:auto;}
+.plan-table{width:100%;border-collapse:separate;border-spacing:0;border-radius:var(--radius-lg);overflow:hidden;border:1px solid var(--border);}
+.plan-table th{background:var(--bg3);color:var(--text3);font-size:calc(11px * var(--s));font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:0;text-align:center;border-bottom:1px solid var(--border);white-space:nowrap;vertical-align:bottom;}
+.plan-table th:first-child{text-align:left;width:calc(120px * var(--s));padding:0 calc(10px * var(--s)) calc(8px * var(--s));}
+.plan-table th:nth-child(2){width:calc(80px * var(--s));padding:0 0 calc(8px * var(--s));}
+.plan-table td{padding:0;border-bottom:1px solid var(--border);vertical-align:middle;}
+.plan-table tr:last-child td{border-bottom:none;}
+.site-cell{padding:0 calc(10px * var(--s));min-height:calc(44px * var(--s));display:flex;align-items:center;}
+.site-name{font-size:calc(13px * var(--s));font-weight:500;color:var(--text);}
+.site-name-placeholder{font-size:calc(12px * var(--s));color:var(--text3);font-style:italic;}
+.vehicle-cell{padding:calc(4px * var(--s)) calc(8px * var(--s));text-align:center;}
+.vehicle-badge{display:inline-flex;align-items:center;justify-content:center;padding:calc(3px * var(--s)) calc(8px * var(--s));border-radius:calc(4px * var(--s));background:var(--bg4);color:var(--text2);font-size:calc(11px * var(--s));font-weight:600;border:1px solid var(--border);white-space:nowrap;}
+.emp-cell{border-left:1px solid var(--border);text-align:center;padding:calc(4px * var(--s)) calc(2px * var(--s));position:relative;}
+.emp-cell.status-absent{background:var(--red-bg);}
+.emp-cell.status-half{background:var(--yellow-bg);}
+.emp-cell.status-school{background:var(--blue-bg);}
+.emp-cell.has-assignment{background:rgba(234,179,8,0.25);}
+.emp-cell.status-absent.has-assignment{background:var(--red-bg);}
+.emp-cell.status-school.has-assignment{background:var(--blue-bg);}
+.emp-cell .cell-mark{font-size:calc(11px * var(--s));font-weight:700;color:var(--text);}
+.emp-cell.status-absent .cell-mark{color:var(--red);}
+.emp-cell.status-school .cell-mark{color:var(--blue);}
+.emp-cell.status-half .cell-mark{color:var(--yellow);}
+.col-header-wrap{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:calc(4px * var(--s));padding:calc(4px * var(--s)) calc(2px * var(--s));height:calc(80px * var(--s));}
+.col-header-name{font-size:calc(11px * var(--s));white-space:nowrap;writing-mode:vertical-rl;transform:rotate(180deg);max-height:calc(72px * var(--s));overflow:hidden;text-overflow:ellipsis;}
+.plan-empty{padding:calc(30px * var(--s));text-align:center;color:var(--text3);font-size:calc(13px * var(--s));}
+
+/* ===== Aufgabenliste ===== */
+.tasks{background:var(--bg2);border-top:calc(2px * var(--s)) solid var(--border2);
+  padding:calc(12px * var(--s)) calc(24px * var(--s)) calc(16px * var(--s));
+  max-height:38vh;display:flex;flex-direction:column;}
+.tasks-header{display:flex;align-items:center;gap:calc(10px * var(--s));margin-bottom:calc(10px * var(--s));flex-shrink:0;}
+.tasks-title{font-size:calc(13px * var(--s));font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text2);}
+.tasks-count{font-size:calc(11px * var(--s));color:var(--text3);background:var(--bg3);border:1px solid var(--border);border-radius:99px;padding:calc(2px * var(--s)) calc(10px * var(--s));}
+.tasks-list{overflow-y:auto;display:flex;flex-direction:column;gap:calc(6px * var(--s));}
+.task{display:flex;align-items:flex-start;gap:calc(12px * var(--s));
+  padding:calc(10px * var(--s)) calc(12px * var(--s));border-radius:var(--radius);
+  background:var(--bg3);border:1px solid transparent;cursor:pointer;transition:background .12s,border-color .12s;}
+.task:active{background:var(--bg4);border-color:var(--accent);}
+.task.overdue{background:var(--red-bg);border-color:var(--red);}
+/* Grosse Trefferfläche: auf einem Touchscreen mit Arbeitshandschuhen zielt
+   niemand auf 18 Pixel. 44px ist das Minimum, das sich zuverlässig treffen lässt. */
+.task-check{width:calc(26px * var(--s));height:calc(26px * var(--s));min-width:calc(26px * var(--s));
+  border:calc(2px * var(--s)) solid var(--text3);border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:calc(15px * var(--s));color:transparent;transition:all .15s;margin-top:calc(1px * var(--s));}
+.task:active .task-check{border-color:var(--green);}
+.task-body{flex:1;min-width:0;}
+.task-title{font-weight:600;font-size:calc(13px * var(--s));}
+.task-desc{font-size:calc(12px * var(--s));color:var(--text2);margin-top:calc(2px * var(--s));white-space:pre-wrap;}
+.task-meta{display:flex;align-items:center;gap:calc(6px * var(--s));flex-wrap:wrap;flex-shrink:0;}
+.task-tag{font-size:calc(11px * var(--s));background:var(--bg4);border:1px solid var(--border2);color:var(--text2);
+  padding:calc(2px * var(--s)) calc(10px * var(--s));border-radius:99px;white-space:nowrap;}
+.task-tag.due-red{background:var(--red);border-color:var(--red);color:#fff;font-weight:700;}
+.task-tag.person{background:var(--accent-glow);border-color:var(--accent);color:#ff8a8d;font-weight:600;}
+/* Erledigt: bleibt durchgestrichen stehen, bis jemand sie in der Verwaltung
+   entfernt — und lässt sich durch nochmaliges Antippen zurückholen. */
+.task.done{opacity:.45;background:var(--bg2);}
+.task.done .task-title,.task.done .task-desc{text-decoration:line-through;}
+.task.done .task-check{border-color:var(--green);background:var(--green);color:#fff;}
+.task.done.overdue{background:var(--bg2);border-color:transparent;}
+.task-done-info{font-size:calc(10px * var(--s));color:var(--text3);margin-top:calc(3px * var(--s));}
+.tasks-empty{padding:calc(16px * var(--s));text-align:center;color:var(--text3);font-size:calc(12px * var(--s));}
+
+/* ===== Start / Fehler ===== */
+.loader{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:calc(16px * var(--s));z-index:9999;}
+.loader-text{color:var(--text2);font-size:calc(14px * var(--s));}
+.loader-sub{color:var(--text3);font-size:calc(11px * var(--s));max-width:60ch;text-align:center;line-height:1.6;}
+.loader-spinner{width:calc(32px * var(--s));height:calc(32px * var(--s));border:calc(3px * var(--s)) solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.toast{position:fixed;bottom:calc(24px * var(--s));right:calc(24px * var(--s));background:var(--bg2);
+  border:1px solid var(--border2);border-radius:var(--radius);padding:calc(12px * var(--s)) calc(18px * var(--s));
+  font-size:calc(12px * var(--s));color:var(--text);z-index:9999;box-shadow:0 8px 32px rgba(0,0,0,.5);display:none;}
+.toast.error{border-color:var(--red);}
+.toast.success{border-color:var(--green);}
+::-webkit-scrollbar{width:calc(6px * var(--s));height:calc(6px * var(--s));}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:99px;}
+</style>
+</head>
+<body>
+
+<div class="loader" id="loader">
+  <div class="loader-spinner"></div>
+  <div class="loader-text">Verbinde…</div>
+  <div class="loader-sub" id="loaderSub"></div>
+</div>
+
+<div class="shell" id="appShell" style="display:none">
+  <div class="topbar">
+    <div class="app-title">Werkstatt<span>Elektra Ins AG</span></div>
+    <div class="topbar-right">
+      <div class="clock" id="clock">--:--</div>
+      <div class="sync-status">
+        <div class="sync-dot" id="syncDot"></div>
+        <span id="syncLabel">Verbinde…</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="body">
+    <div class="sidebar">
+      <div class="sidebar-section">
+        <div class="sidebar-label">Navigation</div>
+        <div class="mini-cal" id="miniCal"></div>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-label">Legende</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#22c55e;opacity:.5;border:1px solid #22c55e"></div><span>Anwesend</span></div>
+        <div class="legend-item"><div class="legend-dot" style="background:#eab308"></div><span>Halbtags – X1 VM / X2 NM</span></div>
+        <div class="legend-item"><div class="legend-dot" style="background:#ef4444"></div><span>Abwesend</span></div>
+        <div class="legend-item"><div class="legend-dot" style="background:#3b82f6"></div><span>Schule</span></div>
+      </div>
+    </div>
+
+    <div class="main">
+      <div class="day-header" id="dayHeader"></div>
+      <div class="plan-wrap" id="planWrap"></div>
+      <div class="tasks">
+        <div class="tasks-header">
+          <div class="tasks-title">Aufgaben</div>
+          <div class="tasks-count" id="tasksCount"></div>
+        </div>
+        <div class="tasks-list" id="tasksList"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toastEl"></div>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script>
+// =====================================================================
+// Werkstatt-Dashboard — eigenständige App für den Wandbildschirm.
+// Liest denselben Firebase-Stand wie Tagesplanung und Reading, schreibt
+// aber ausschliesslich in "werkstattAufgaben". Der Plan selbst ist hier
+// unveränderbar: es gibt keine Funktion, die ihn anfassen könnte.
+// =====================================================================
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBR_zR1xGUBOFWB4_14yK5yeIlC54VHAHo",
+  authDomain: "elektra-tagesplanung-23b62.firebaseapp.com",
+  databaseURL: "https://elektra-tagesplanung-23b62-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "elektra-tagesplanung-23b62",
+  storageBucket: "elektra-tagesplanung-23b62.firebasestorage.app",
+  messagingSenderId: "1026963459245",
+  appId: "1:1026963459245:web:6a5aeaed0afd8ade37ca24"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+const auth = firebase.auth();
+
+const COLORS = ['#6366f1','#8b5cf6','#06b6d4','#10b981','#f59e0b','#ef4444','#ec4899','#14b8a6','#84cc16','#f97316','#a855f7','#0ea5e9','#22c55e','#eab308','#e11d48','#7c3aed','#059669','#d97706','#2563eb','#dc2626'];
+const AUFGABEN_PFAD = 'werkstattAufgaben';
+// Nach dieser Zeit ohne Berührung springt die Anzeige auf heute zurück.
+const ZURUECK_NACH_MS = 30000;
+// Bricht die Verbindung länger weg, lädt die Seite neu. Ohne das steht ein
+// Wandbildschirm nach einem WLAN-Aussetzer unter Umständen bis zum nächsten
+// Handgriff mit veralteten Daten da.
+const NEULADEN_NACH_OFFLINE_MS = 120000;
+
+let state = {
+  currentDate: new Date(),   // Monat im Minikalender
+  selectedDate: new Date(),  // angezeigter Tag
+  employees: [],
+  inactiveEmployees: [],
+  employeeDates: {},
+  vehicles: [],
+  plans: {},
+  aufgaben: {},
+  schreibenGesperrt: null   // gesetzt, wenn die anonyme Anmeldung scheitert
+};
+
+// ===== Datumshilfen (identisch zur Tagesplanung) =====
+function dateKey(d){const y=d.getFullYear();const m=String(d.getMonth()+1).padStart(2,'0');const day=String(d.getDate()).padStart(2,'0');return y+'-'+m+'-'+day;}
+function getDayPlan(d){const k=dateKey(d);return state.plans[k]||{sites:[],globalStatus:{}};}
+function istHeute(){return dateKey(state.selectedDate)===dateKey(new Date());}
+function escHtml(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+
+// Ein-/Austritt wie im Management: ausgetretene und noch nicht eingetretene ausblenden
+function empDates(emp){return (state.employeeDates||{})[emp]||{};}
+function isArchivedAsOf(emp,refKey){const a=empDates(emp).austritt;return !!a&&a<=refKey;}
+function isNotYetStartedAsOf(emp,refKey){const e=empDates(emp).eintritt;return !!e&&e>refKey;}
+function isHiddenEmpAsOf(emp,refKey){
+  return (state.inactiveEmployees||[]).includes(emp)||isArchivedAsOf(emp,refKey)||isNotYetStartedAsOf(emp,refKey);
+}
+
+// ===== Skalierung =====
+// ?scale=1.9 einmal aufrufen, der Wert bleibt im Gerät. So lässt sich die
+// Schriftgrösse direkt am Bildschirm justieren, ohne die App neu zu bauen.
+(function initScale(){
+  const p = new URLSearchParams(location.search).get('scale');
+  let s = null;
+  if (p && !isNaN(parseFloat(p))) {
+    s = Math.min(4, Math.max(0.6, parseFloat(p)));
+    try { localStorage.setItem('dashScale', String(s)); } catch(e){}
+  } else {
+    try { const v = localStorage.getItem('dashScale'); if (v) s = parseFloat(v); } catch(e){}
+  }
+  if (s && !isNaN(s)) document.documentElement.style.setProperty('--s', String(s));
+})();
+
+// ===== Verbindungsanzeige =====
+let offlineSeit = null;
+function setOnline(on){
+  const dot = document.getElementById('syncDot'), lbl = document.getElementById('syncLabel');
+  if (!dot) return;
+  dot.className = 'sync-dot ' + (on ? 'online' : 'offline');
+  // "Nur Ansicht" nicht übermalen: der Verbindungs-Listener feuert nach der
+  // gescheiterten Anmeldung und hätte den Hinweis sonst sofort überschrieben.
+  lbl.textContent = on ? (state.schreibenGesperrt ? 'Nur Ansicht' : 'Online') : 'Keine Verbindung';
+  if (on) { offlineSeit = null; }
+  else if (offlineSeit === null) { offlineSeit = Date.now(); }
+}
+setInterval(() => {
+  if (offlineSeit && Date.now() - offlineSeit > NEULADEN_NACH_OFFLINE_MS) location.reload();
+}, 10000);
+
+// ===== Uhr + Datumswechsel um Mitternacht =====
+let letzterTag = dateKey(new Date());
+setInterval(() => {
+  const now = new Date();
+  const el = document.getElementById('clock');
+  if (el) el.textContent = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
+  const heute = dateKey(now);
+  if (heute !== letzterTag) { letzterTag = heute; goToday(); }
+}, 1000);
+
+// ===== Rücksprung auf heute =====
+let zurueckTimer = null, countdownTimer = null;
+function beruehrt(){
+  clearTimeout(zurueckTimer);
+  clearInterval(countdownTimer);
+  if (istHeute()) { zeigeHinweis(null); return; }
+  let rest = Math.round(ZURUECK_NACH_MS / 1000);
+  zeigeHinweis(rest);
+  countdownTimer = setInterval(() => { rest--; if (rest >= 0) zeigeHinweis(rest); }, 1000);
+  zurueckTimer = setTimeout(() => { clearInterval(countdownTimer); goToday(); }, ZURUECK_NACH_MS);
+}
+function zeigeHinweis(sek){
+  const el = document.getElementById('backHint');
+  if (!el) return;
+  if (sek === null) { el.classList.remove('on'); return; }
+  el.classList.add('on');
+  el.textContent = 'zurück zu heute in ' + sek + 's';
+}
+document.addEventListener('click', beruehrt);
+document.addEventListener('touchstart', beruehrt, {passive:true});
+
+// ===== Firebase =====
+function setupListeners(){
+  db.ref('plans').on('value', snap => { state.plans = snap.val() || {}; render(); });
+  db.ref('settings').on('value', snap => {
+    const s = snap.val();
+    if (s) {
+      if (s.employees) state.employees = s.employees;
+      if (s.vehicles) state.vehicles = s.vehicles;
+      if (s.inactiveEmployees) state.inactiveEmployees = s.inactiveEmployees;
+      state.employeeDates = s.employeeDates || {};
+    }
+    render();
+  });
+  db.ref(AUFGABEN_PFAD).on('value', snap => { state.aufgaben = snap.val() || {}; renderAufgaben(); });
+  db.ref('.info/connected').on('value', snap => setOnline(!!snap.val()));
+}
+
+// ===== Minikalender (nur Anzeige, nicht anklickbar) =====
+function renderMiniCal(){
+  const d = state.currentDate, y = d.getFullYear(), m = d.getMonth();
+  const first = new Date(y,m,1).getDay(), days = new Date(y,m+1,0).getDate(), today = new Date();
+  const months = ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
+  let html = `<div class="mini-cal-header"><span class="mini-cal-title">${months[m]} ${y}</span></div><div class="mini-cal-grid">`;
+  ['Mo','Di','Mi','Do','Fr','Sa','So'].forEach(dw => html += `<div class="mini-cal-dow">${dw}</div>`);
+  const start = first === 0 ? 6 : first - 1;
+  for (let i = 0; i < start; i++) html += `<div class="mini-cal-day empty">x</div>`;
+  for (let i = 1; i <= days; i++) {
+    const dd = new Date(y,m,i), k = dateKey(dd);
+    const isToday = dateKey(today) === k, isSel = dateKey(state.selectedDate) === k;
+    const hasData = state.plans[k] && state.plans[k].sites && state.plans[k].sites.length > 0;
+    let cls = 'mini-cal-day';
+    if (isToday) cls += ' today';
+    if (isSel) cls += ' selected';
+    if (hasData && !isSel) cls += ' has-data';
+    html += `<div class="${cls}">${i}</div>`;
+  }
+  document.getElementById('miniCal').innerHTML = html + '</div>';
+}
+
+// ===== Tagesplan =====
+function renderPlan(){
+  const d = state.selectedDate, plan = getDayPlan(d);
+  const days = ['Sonntag','Montag','Dienstag','Mittwoch','Donnerstag','Freitag','Samstag'];
+  const months = ['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
+  const refKey = dateKey(d);
+  const activeEmployees = state.employees.filter(e => !isHiddenEmpAsOf(e, refKey));
+
+  document.getElementById('dayHeader').innerHTML = `
+    <button class="day-nav-btn" onclick="changeDay(-1)">‹</button>
+    <button class="day-nav-btn today-btn" onclick="goToday()">Heute</button>
+    <div><div class="day-title">${days[d.getDay()]}</div><div class="day-subtitle">${d.getDate()}. ${months[d.getMonth()]} ${d.getFullYear()}</div></div>
+    <button class="day-nav-btn" onclick="changeDay(1)">›</button>
+    <div class="back-hint" id="backHint"></div>`;
+
+  const empHeaders = activeEmployees.map(emp => {
+    const gs = plan.globalStatus?.[emp] || '';
+    const sc = gs === 'absent' ? 'var(--red)' : gs === 'school' ? 'var(--blue)' : gs === 'half' ? 'var(--yellow)' : 'var(--green)';
+    return `<th><div class="col-header-wrap"><div class="col-header-name" title="${escHtml(emp)}">${escHtml(emp)}</div><div style="width:calc(8px * var(--s));height:calc(8px * var(--s));border-radius:50%;background:${sc};margin:0 auto"></div></div></th>`;
+  }).join('');
+
+  const rows = (plan.sites || []).map(site => {
+    const vIdx = site.vehicle ? site.vehicle - 1 : -1;
+    const vName = vIdx >= 0 ? (state.vehicles[vIdx] || '—') : '—';
+    const empCells = activeEmployees.map(emp => {
+      const gs = plan.globalStatus?.[emp] || '';
+      const a = site.assignments?.[emp] || '';
+      let cls = 'emp-cell', mark = '';
+      if (gs === 'absent') { cls += ' status-absent'; mark = a ? `<span class="cell-mark">${escHtml(a)}</span>` : `<span class="cell-mark" style="opacity:.3">—</span>`; }
+      else if (gs === 'school') { cls += ' status-school'; mark = a ? `<span class="cell-mark">${escHtml(a)}</span>` : `<span class="cell-mark" style="opacity:.3">S</span>`; }
+      else if (gs === 'half') { cls += ' status-half' + (a ? ' has-assignment' : ''); mark = a ? `<span class="cell-mark">${escHtml(a)}</span>` : ''; }
+      else { cls += (a ? ' has-assignment' : ''); mark = a ? `<span class="cell-mark">${escHtml(a)}</span>` : ''; }
+      return `<td class="${cls}"><center>${mark}</center></td>`;
+    }).join('');
+    return `<tr><td><div class="site-cell"><span class="site-name">${site.name ? escHtml(site.name) : '<span class="site-name-placeholder">Baustelle…</span>'}</span></div></td><td class="vehicle-cell"><span class="vehicle-badge">${escHtml(vName)}</span></td>${empCells}</tr>`;
+  }).join('');
+
+  document.getElementById('planWrap').innerHTML = (plan.sites || []).length === 0
+    ? `<div class="plan-empty">Für diesen Tag ist noch keine Baustelle geplant.</div>`
+    : `<table class="plan-table">
+         <thead><tr><th>Baustelle</th><th>Fahrzeug</th>${empHeaders}</tr></thead>
+         <tbody>${rows}</tbody>
+       </table>`;
+}
+
+function goToday(){
+  const n = new Date();
+  state.selectedDate = n;
+  state.currentDate = new Date(n.getFullYear(), n.getMonth(), 1);
+  clearTimeout(zurueckTimer); clearInterval(countdownTimer);
+  render();
+}
+function changeDay(dir){
+  const d = new Date(state.selectedDate);
+  d.setDate(d.getDate() + dir);
+  state.selectedDate = d;
+  state.currentDate = new Date(d.getFullYear(), d.getMonth(), 1);
+  render();
+}
+
+// ===== Aufgaben =====
+function aufgabeUeberfaellig(a){
+  return !a.erledigt && !!a.termin && a.termin < dateKey(new Date());
+}
+function fmtTermin(iso){
+  if (!iso) return '';
+  const [y,m,d] = iso.split('-');
+  return d + '.' + m + '.' + y;
+}
+function renderAufgaben(){
+  const el = document.getElementById('tasksList');
+  if (!el) return;
+  // Offene zuerst, darin die mit dem frühesten Termin oben; Erledigte ans Ende.
+  const liste = Object.entries(state.aufgaben || {}).sort((a,b) => {
+    const A = a[1], B = b[1];
+    if (!!A.erledigt !== !!B.erledigt) return A.erledigt ? 1 : -1;
+    const at = A.termin || '9999-99-99', bt = B.termin || '9999-99-99';
+    if (at !== bt) return at < bt ? -1 : 1;
+    return (A.createdAt || 0) - (B.createdAt || 0);
+  });
+
+  const offen = liste.filter(([,a]) => !a.erledigt).length;
+  document.getElementById('tasksCount').textContent =
+    liste.length === 0 ? '' : offen + ' offen' + (liste.length - offen > 0 ? ' · ' + (liste.length - offen) + ' erledigt' : '');
+
+  if (liste.length === 0) { el.innerHTML = `<div class="tasks-empty">Keine Aufgaben erfasst.</div>`; return; }
+
+  el.innerHTML = liste.map(([id,a]) => {
+    const personen = Array.isArray(a.zugewiesen) ? a.zugewiesen : (a.zugewiesen ? [a.zugewiesen] : []);
+    const ueber = aufgabeUeberfaellig(a);
+    const erledigtInfo = a.erledigt && a.erledigtAm
+      ? `<div class="task-done-info">erledigt am ${new Date(a.erledigtAm).toLocaleDateString('de-CH')} um ${new Date(a.erledigtAm).toLocaleTimeString('de-CH',{hour:'2-digit',minute:'2-digit'})}</div>`
+      : '';
+    return `<div class="task${a.erledigt ? ' done' : ''}${ueber ? ' overdue' : ''}" onclick="aufgabeUmschalten('${id}')">
+      <div class="task-check">✓</div>
+      <div class="task-body">
+        <div class="task-title">${escHtml(a.titel || '')}</div>
+        ${a.beschreibung ? `<div class="task-desc">${escHtml(a.beschreibung)}</div>` : ''}
+        ${erledigtInfo}
+      </div>
+      <div class="task-meta">
+        ${a.termin ? `<span class="task-tag${ueber ? ' due-red' : ''}">bis ${fmtTermin(a.termin)}</span>` : ''}
+        ${personen.map(p => `<span class="task-tag person">${escHtml(p)}</span>`).join('')}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// Abhaken und zurückholen sind dieselbe Geste: nochmal antippen macht es
+// rückgängig. Ein versehentlicher Haken soll niemanden zum Laptop zwingen.
+function aufgabeUmschalten(id){
+  const a = (state.aufgaben || {})[id];
+  if (!a) return;
+  if (state.schreibenGesperrt) { showToast('Abhaken nicht möglich – ' + state.schreibenGesperrt, 'error'); return; }
+  const neu = !a.erledigt;
+  db.ref(AUFGABEN_PFAD + '/' + id).update({
+    erledigt: neu,
+    erledigtAm: neu ? Date.now() : null
+  }).then(() => {
+    showToast(neu ? '✓ Erledigt' : 'Wieder offen', 'success');
+  }).catch(e => {
+    showToast('Konnte nicht gespeichert werden: ' + e.message, 'error');
+  });
+}
+
+// ===== Rendern =====
+function render(){
+  renderMiniCal();
+  renderPlan();
+  renderAufgaben();
+  // Nach jedem Neuzeichnen steht der Hinweis-Container neu da
+  if (!istHeute()) beruehrt(); else zeigeHinweis(null);
+}
+
+function showToast(msg, type){
+  const el = document.getElementById('toastEl');
+  el.className = 'toast ' + (type || '');
+  el.textContent = msg;
+  el.style.display = 'block';
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.style.display = 'none', 2500);
+}
+
+// ===== Start =====
+// Anonyme Anmeldung: der Bildschirm braucht einen Account, um die Haken
+// speichern zu dürfen, aber niemand soll an der Wand ein Passwort eintippen.
+//
+// Scheitert sie, startet die App trotzdem — Lesen geht ohne Anmeldung. Ein
+// Wandbildschirm, der wegen eines Anmeldeproblems gar nichts mehr zeigt, ist
+// schlimmer als einer, der den Plan zeigt und beim Abhaken Bescheid gibt.
+function start(){
+  auth.signInAnonymously()
+    .catch(e => {
+      state.schreibenGesperrt = (e.code === 'auth/admin-restricted-operation')
+        ? 'Anonyme Anmeldung ist in der Firebase-Konsole nicht aktiviert (Authentication → Sign-in method).'
+        : e.message;
+    })
+    .then(() => {
+      setupListeners();
+      document.getElementById('loader').style.display = 'none';
+      document.getElementById('appShell').style.display = 'grid';
+      render();
+      if (state.schreibenGesperrt) setOnlyView();
+    });
+}
+function setOnlyView(){
+  const lbl = document.getElementById('syncLabel');
+  if (lbl) lbl.textContent = 'Nur Ansicht';
+  showToast('Abhaken nicht möglich – ' + state.schreibenGesperrt, 'error');
+}
+start();
+</script>
+</body>
+</html>
