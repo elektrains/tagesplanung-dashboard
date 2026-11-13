@@ -11,18 +11,22 @@ Das Gerät ist laut Handbuch für Hochformat freigegeben (max. 15° Neigung).
 https://elektrains.github.io/tagesplanung-dashboard/
 ```
 
-## Warum nicht die Matrix aus der Management-App
+## Aufteilung
 
-Im Hochformat ist der Bildschirm 68,5 cm breit. Die Planmatrix hat bei
-16 Mitarbeitern 18 Spalten — rechnerisch 3,8 cm pro Spalte. Das liest aus zwei
-Metern niemand mehr.
+Oben der Tagesplan als gewohnte Matrix mit den X — **höchstens 48 % der Höhe**,
+damit darunter genug Platz bleibt. Die Aufgaben nehmen so viel Raum wie sie
+Inhalt haben, der ganze Rest fällt ans Infoboard.
 
-Deshalb steht hier **eine Zeile pro Mitarbeiter**: Name, Baustelle, Fahrzeug.
-Mehrere Einsätze am selben Tag stehen untereinander, Halbtage mit VM/NM
-gekennzeichnet. Abwesend und Schule färben die Zeile.
+Passt die Matrix nicht in ihren Deckel — viele Baustellen, viele Mitarbeiter —,
+wird **nur sie** heruntergerechnet, nicht die ganze Seite. Bei 16 Baustellen
+landet sie bei Faktor 0,87 und bleibt vollständig sichtbar, während Aufgaben
+und Infoboard unberührt bleiben.
 
-Gemessen am echten Seitenverhältnis wird der Mitarbeitername so 16,2 mm hoch
-statt 9,6 mm in der Matrix — bequem lesbar auf etwa 2,7 statt 1,6 Meter.
+Ein Hinweis zur Lesbarkeit: im Hochformat ist der Schirm 68,5 cm breit, die
+18 Spalten lassen also rund 3,8 cm pro Mitarbeiter. Die Baustellennamen werden
+14 mm hoch (bequem auf gut zwei Meter), die senkrechten Mitarbeiternamen
+12 mm. Das ist ein Bildschirm zum Hingehen, nicht zum Lesen quer durch die
+Werkstatt.
 
 ## Was angezeigt wird
 

@@ -61,8 +61,11 @@ body{
 .inhalt{flex:1;display:grid;overflow:hidden;min-height:0;}
 /* Hochformat: drei Bereiche untereinander. Querformat: Plan links, die
    beiden Listen rechts — sonst bliebe der Plan ein schmaler Streifen. */
-.inhalt{grid-template-rows:minmax(0,1fr) auto auto;}
-body.quer .inhalt{grid-template-rows:minmax(0,1fr) auto;grid-template-columns:1fr;}
+/* Plan oben, gedeckelt auf knapp die halbe Hoehe. Was darunter frei bleibt,
+   teilen sich Aufgaben und Infoboard. */
+.inhalt{grid-template-rows:auto auto minmax(0,1fr);}
+/* Aufgaben so hoch wie ihr Inhalt, der freie Rest faellt ans Infoboard —
+   dort wirkt er wie Platz fuer weitere Mitteilungen statt wie ein Loch. */
 
 .block{border-top:calc(2px * var(--s)) solid var(--border2);background:var(--bg2);
   padding:calc(10px * var(--s)) calc(18px * var(--s)) calc(12px * var(--s));
@@ -74,32 +77,45 @@ body.quer .inhalt{grid-template-rows:minmax(0,1fr) auto;grid-template-columns:1f
 .block-liste{overflow:hidden;display:flex;flex-direction:column;gap:calc(6px * var(--s));}
 .leer{padding:calc(12px * var(--s));text-align:center;color:var(--text3);font-size:calc(12px * var(--s));}
 
-/* ===== Tagesplan: eine Zeile pro Mitarbeiter ===== */
-.plan{overflow:hidden;padding:calc(10px * var(--s)) calc(18px * var(--s));display:flex;flex-direction:column;gap:calc(5px * var(--s));min-height:0;}
-.mi{display:flex;align-items:stretch;gap:calc(10px * var(--s));
-  background:var(--bg2);border-radius:var(--radius);border-left:calc(5px * var(--s)) solid var(--green);
-  padding:calc(7px * var(--s)) calc(12px * var(--s));min-height:calc(42px * var(--s));}
-.mi.s-absent{border-left-color:var(--red);background:var(--red-bg);}
-.mi.s-school{border-left-color:var(--blue);background:var(--blue-bg);}
-.mi.s-half{border-left-color:var(--yellow);}
-.mi-name{font-size:calc(17px * var(--s));font-weight:700;letter-spacing:.3px;
-  width:calc(132px * var(--s));flex-shrink:0;display:flex;align-items:center;
-  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.mi-einsaetze{flex:1;display:flex;flex-direction:column;justify-content:center;gap:calc(3px * var(--s));min-width:0;}
-.mi-zeile{display:flex;align-items:center;gap:calc(9px * var(--s));min-width:0;}
-.mi-ort{font-size:calc(15px * var(--s));font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.mi-frei{font-size:calc(14px * var(--s));color:var(--text3);font-style:italic;}
-.mi-status{font-size:calc(15px * var(--s));font-weight:700;}
-.mi.s-absent .mi-status{color:var(--red);}
-.mi.s-school .mi-status{color:var(--blue);}
-.tag-chip{font-size:calc(10px * var(--s));font-weight:700;padding:calc(2px * var(--s)) calc(8px * var(--s));
-  border-radius:99px;white-space:nowrap;flex-shrink:0;}
-.t-vm{background:var(--yellow-bg);color:var(--yellow);}
-.t-nm{background:var(--blue-bg);color:var(--blue);}
-.fz{font-size:calc(12px * var(--s));font-weight:600;color:var(--text2);background:var(--bg4);
-  border:1px solid var(--border);border-radius:calc(4px * var(--s));
-  padding:calc(2px * var(--s)) calc(9px * var(--s));white-space:nowrap;flex-shrink:0;margin-left:auto;}
-
+/* ===== Tagesplan: die gewohnte Matrix ===== */
+/* Der Plan bekommt hoechstens knapp die halbe Hoehe. Passt die Tabelle
+   nicht hinein, wird NUR sie verkleinert (transform), nicht die ganze
+   Seite — sonst schrumpften Aufgaben und Infoboard unnoetig mit. */
+.plan-box{overflow:hidden;padding:calc(10px * var(--s)) calc(14px * var(--s));
+  max-height:48vh;display:flex;align-items:flex-start;}
+.plan-fit{transform-origin:top left;}
+.plan-table{border-collapse:separate;border-spacing:0;border-radius:var(--radius-lg);
+  overflow:hidden;border:1px solid var(--border);background:var(--bg2);}
+.plan-table th{background:var(--bg3);color:var(--text3);font-size:calc(11px * var(--s));
+  font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:0;text-align:center;
+  border-bottom:1px solid var(--border);white-space:nowrap;vertical-align:bottom;}
+.plan-table th.sp-bau{text-align:left;padding:0 calc(10px * var(--s)) calc(8px * var(--s));}
+.plan-table th.sp-fz{padding:0 0 calc(8px * var(--s));}
+.plan-table td{padding:0;border-bottom:1px solid var(--border);vertical-align:middle;}
+.plan-table tr:last-child td{border-bottom:none;}
+.bau{padding:calc(6px * var(--s)) calc(10px * var(--s));font-size:calc(14px * var(--s));
+  font-weight:500;line-height:1.25;}
+.bau-leer{color:var(--text3);font-style:italic;font-weight:400;}
+.fz-zelle{padding:calc(4px * var(--s)) calc(7px * var(--s));text-align:center;}
+.fz{display:inline-block;font-size:calc(12px * var(--s));font-weight:600;color:var(--text2);
+  background:var(--bg4);border:1px solid var(--border);border-radius:calc(4px * var(--s));
+  padding:calc(2px * var(--s)) calc(8px * var(--s));white-space:nowrap;}
+.mz{border-left:1px solid var(--border);text-align:center;padding:calc(4px * var(--s)) calc(2px * var(--s));}
+.mz.s-absent{background:var(--red-bg);}
+.mz.s-school{background:var(--blue-bg);}
+.mz.s-half{background:var(--yellow-bg);}
+.mz.drin{background:rgba(234,179,8,.28);}
+.mz.s-absent.drin{background:var(--red-bg);}
+.mz.s-school.drin{background:var(--blue-bg);}
+.mark{font-size:calc(14px * var(--s));font-weight:700;color:var(--text);}
+.mz.s-absent .mark{color:var(--red);}
+.mz.s-school .mark{color:var(--blue);}
+.mz.s-half .mark{color:var(--yellow);}
+.kopf-wrap{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;
+  gap:calc(4px * var(--s));padding:calc(4px * var(--s)) calc(2px * var(--s));height:calc(92px * var(--s));}
+.kopf-name{font-size:calc(12px * var(--s));white-space:nowrap;writing-mode:vertical-rl;
+  transform:rotate(180deg);max-height:calc(82px * var(--s));overflow:hidden;}
+.kopf-punkt{width:calc(8px * var(--s));height:calc(8px * var(--s));border-radius:50%;}
 /* ===== Aufgaben ===== */
 .auf{display:flex;align-items:flex-start;gap:calc(12px * var(--s));
   padding:calc(9px * var(--s)) calc(12px * var(--s));border-radius:var(--radius);
@@ -185,7 +201,7 @@ body.quer .inhalt{grid-template-rows:minmax(0,1fr) auto;grid-template-columns:1f
 
 <div class="shell" id="shell" style="display:none">
   <div class="topbar">
-    <div class="marke">Werkstatt<span>Elektra Ins AG</span></div>
+    <div class="marke">Infoboard<span>Elektra Ins AG</span></div>
     <div class="tag-nav">
       <button class="nav-btn" onclick="tagWechseln(-1)">‹</button>
       <button class="nav-btn klein" onclick="aufHeute()">Heute</button>
@@ -203,7 +219,7 @@ body.quer .inhalt{grid-template-rows:minmax(0,1fr) auto;grid-template-columns:1f
   </div>
 
   <div class="inhalt">
-    <div class="plan" id="plan"></div>
+    <div class="plan-box"><div class="plan-fit" id="planFit"></div></div>
 
     <div class="block" id="blockAufgaben">
       <div class="block-kopf">
@@ -318,7 +334,6 @@ function passeAnHoehe(){
   w.style.setProperty('--s',String(state.basisSkala));
   for(let i=0;i<10;i++){
     const ueber=Math.max(
-      ueberlauf(document.getElementById('plan')),
       ueberlauf(document.getElementById('aufgabenListe')),
       ueberlauf(document.getElementById('infoListe')),
       document.body.scrollHeight-innerHeight
@@ -331,6 +346,7 @@ function passeAnHoehe(){
   }
 }
 function ueberlauf(el){return el?el.scrollHeight-el.clientHeight:0;}
+
 
 // Hoch- oder Querformat: im Querformat bleibt für das Infoboard kein
 // sinnvoller Platz mehr, dort rücken die Bereiche enger zusammen.
@@ -409,38 +425,61 @@ function zeichnePlan(){
   document.getElementById('datum').textContent=d.getDate()+'. '+monate[d.getMonth()]+' '+d.getFullYear();
 
   const leute=aktiveMitarbeiter(ref);
-  const el=document.getElementById('plan');
-  if(leute.length===0){el.innerHTML='<div class="leer">Keine Mitarbeiter hinterlegt.</div>';return;}
+  const el=document.getElementById('planFit');
+  const sites=plan.sites||[];
+  if(leute.length===0||sites.length===0){
+    el.style.transform='none';
+    el.innerHTML='<div class="leer">'+(leute.length===0?'Keine Mitarbeiter hinterlegt.':'Für diesen Tag ist noch keine Baustelle geplant.')+'</div>';
+    return;
+  }
 
-  el.innerHTML=leute.map(emp=>{
+  const kopf=leute.map(emp=>{
     const gs=plan.globalStatus?.[emp]||'';
-    // Alle Einsätze dieses Mitarbeiters an diesem Tag einsammeln
-    const einsaetze=[];
-    (plan.sites||[]).forEach(site=>{
-      const a=site.assignments?.[emp];
-      if(!a)return;
-      const fz=site.vehicle?(state.vehicles[site.vehicle-1]||''):'';
-      einsaetze.push({ort:site.name||'Baustelle…',fz,tag:a==='X1'?'VM':a==='X2'?'NM':''});
-    });
-
-    let inhalt;
-    if(gs==='absent'&&einsaetze.length===0) inhalt='<div class="mi-zeile"><span class="mi-status">Abwesend</span></div>';
-    else if(gs==='school'&&einsaetze.length===0) inhalt='<div class="mi-zeile"><span class="mi-status">Schule</span></div>';
-    else if(einsaetze.length===0) inhalt='<div class="mi-zeile"><span class="mi-frei">kein Einsatz eingeteilt</span></div>';
-    else inhalt=einsaetze.map(e=>`<div class="mi-zeile">
-        <span class="mi-ort">${esc(e.ort)}</span>
-        ${e.tag?`<span class="tag-chip ${e.tag==='VM'?'t-vm':'t-nm'}">${e.tag}</span>`:''}
-        ${e.fz?`<span class="fz">${esc(e.fz)}</span>`:''}
-      </div>`).join('');
-
-    const cls = gs==='absent'?' s-absent' : gs==='school'?' s-school' : gs==='half'?' s-half' : '';
-    return `<div class="mi${cls}">
-      <div class="mi-name">${esc(emp)}</div>
-      <div class="mi-einsaetze">${inhalt}</div>
-    </div>`;
+    const f = gs==='absent'?'var(--red)' : gs==='school'?'var(--blue)' : gs==='half'?'var(--yellow)' : 'var(--green)';
+    return `<th><div class="kopf-wrap"><div class="kopf-name">${esc(emp)}</div><div class="kopf-punkt" style="background:${f}"></div></div></th>`;
   }).join('');
+
+  const zeilen=sites.map(site=>{
+    const vi=site.vehicle?site.vehicle-1:-1;
+    const vn=vi>=0?(state.vehicles[vi]||''):'';
+    const zellen=leute.map(emp=>{
+      const gs=plan.globalStatus?.[emp]||'';
+      const a=site.assignments?.[emp]||'';
+      let c='mz', m='';
+      if(gs==='absent'){c+=' s-absent'; m=a?esc(a):'—';}
+      else if(gs==='school'){c+=' s-school'; m=a?esc(a):'S';}
+      else if(gs==='half'){c+=' s-half'+(a?' drin':''); m=a?esc(a):'';}
+      else {c+=(a?' drin':''); m=a?esc(a):'';}
+      return `<td class="${c}">${m?`<span class="mark">${m}</span>`:''}</td>`;
+    }).join('');
+    return `<tr>
+      <td><div class="bau">${site.name?esc(site.name):'<span class="bau-leer">Baustelle…</span>'}</div></td>
+      <td class="fz-zelle">${vn?`<span class="fz">${esc(vn)}</span>`:''}</td>
+      ${zellen}</tr>`;
+  }).join('');
+
+  el.innerHTML=`<table class="plan-table">
+    <thead><tr><th class="sp-bau">Baustelle</th><th class="sp-fz">Fahrzeug</th>${kopf}</tr></thead>
+    <tbody>${zeilen}</tbody></table>`;
+  planAnpassen();
 }
 
+// Die Matrix wird fuer sich allein passend gerechnet: sie darf breiter und
+// hoeher sein als ihr Kasten und wird dann heruntergerechnet. So bleibt der
+// Platz darunter fuer Aufgaben und Infoboard unangetastet.
+function planAnpassen(){
+  const box=document.querySelector('.plan-box'), fit=document.getElementById('planFit');
+  if(!box||!fit)return;
+  fit.style.transform='none';
+  const t=fit.querySelector('.plan-table'); if(!t)return;
+  const bs=getComputedStyle(box);
+  const bw=box.clientWidth - parseFloat(bs.paddingLeft) - parseFloat(bs.paddingRight);
+  const bh=box.clientHeight - parseFloat(bs.paddingTop) - parseFloat(bs.paddingBottom);
+  const tw=t.scrollWidth, th=t.scrollHeight;
+  if(tw<=0||th<=0)return;
+  const k=Math.min(1, bw/tw, bh/th);
+  fit.style.transform = k<1 ? 'scale('+k+')' : 'none';
+}
 function aufHeute(){
   const n=new Date();
   state.selectedDate=n; state.currentDate=new Date(n.getFullYear(),n.getMonth(),1);
@@ -580,6 +619,7 @@ function zeichne(){
   zeichneAufgaben();
   zeichneInfo();
   passeAnHoehe();
+  planAnpassen();
   if(!istHeute()) beruehrt(); else hinweis(null);
 }
 
