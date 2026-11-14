@@ -9,7 +9,7 @@ AKTIV
 {
   "rules": {
     ".read": true,
-    ".write": "auth != null && auth.token.email != null && auth.token.email.toLowerCase().endsWith('@elektrains.ch')",
+    ".write": "auth != null && root.child('zugriff').child(auth.uid).val() == true",
 
     "werkstattAufgaben": {
       "$aufgabe": {
@@ -38,40 +38,60 @@ AKTIV
 }
 
 
+WARUM NICHT UEBER DIE E-MAIL-ADRESSE
+------------------------------------
+Eine Fassung mit ".write": "... auth.token.email.toLowerCase().endsWith(
+'@elektrains.ch')" war am 14.11.2026 kurz aktiv. Sie ist bequemer - ein
+neues Konto auf der Firmenadresse haette das Schreibrecht automatisch
+mitgebracht - aber sie steht und faellt damit, dass sich niemand selbst ein
+Konto anlegen kann. Sonst registriert sich jemand mit einer erfundenen
+Adresse auf @elektrains.ch und hat Vollzugriff; der Projektschluessel dazu
+steht im Quelltext jeder Seite und muss das auch.
+
+Und genau diesen Schalter koennen wir nicht umlegen:
+
+  Authentication -> Einstellungen -> Nutzeraktionen -> "Erstellen
+  (Registrierung)" deckt auch die ANONYME Anmeldung ab. Ist der Haken weg,
+  bekommt der Wandbildschirm beim ersten Start kein Konto mehr:
+  auth/admin-restricted-operation. Er zeigt dann zwar alles an - Lesen ist
+  offen - kann aber nichts mehr abhaken und niemand kann sich eintragen.
+  Am 14.11.2026 nachgemessen, genau so eingetreten.
+
+Ein Geraet, das schon einmal angemeldet war, laeuft mit seinem gespeicherten
+Konto weiter. Ein neues Geraet - und der Samsung ist noch nicht einmal
+geliefert - kommt nicht mehr hinein.
+
+Darum: Registrierung bleibt eingeschaltet, und das Schreibrecht haengt an
+einer namentlichen Liste statt an der Adresse. Wer sich selbst ein Konto
+anlegt, steht nicht auf der Liste und kann nichts aendern.
+
+
 WAS DIE ZEILEN TUN
 ------------------
 .read: true
   Bleibt offen. Reading-App und Wandbildschirm haben keinen Login und
-  brauchen das.
+  brauchen das. Die Datenbank ist damit fuer jeden lesbar, der die Adresse
+  kennt - bewusst in Kauf genommen.
 
-.write mit der Adresse auf @elektrains.ch
-  Schreiben darf, wer mit einer Firmenadresse angemeldet ist. Vorher hiess
-  die Regel "wer nicht anonym angemeldet ist" - das traf auf jedes Konto zu,
-  das im Projekt existiert oder dort angelegt werden koennte.
+.write mit der Liste unter zugriff
+  Schreiben darf nur, wessen Benutzerkennung (uid) im Knoten "zugriff"
+  steht und dort auf true gesetzt ist.
 
-  Das anonyme Konto des Wandbildschirms hat gar keine Adresse und faellt
-  damit von selbst heraus; auth.token.email ist dort null, darum die
-  Abfrage davor.
+  Die Liste liegt in der Datenbank und nicht im Regeltext: einen neuen
+  Projektleiter aufzunehmen heisst dann, eine Zeile zu ergaenzen, statt die
+  Regeln neu zu schreiben. Die Liste selbst steht unter derselben Regel,
+  nur wer schon drin ist, kann sie aendern.
 
-  Diese Fassung ersetzt einen Entwurf mit einer Liste einzelner uids. Die
-  Liste waere einen Tick enger gewesen, haette aber bei jeder neuen Person
-  einen zweiten Handgriff verlangt - und der wird vergessen. Dann meldet
-  sich die neue Kollegin an, sieht alles und kann nichts speichern, ohne
-  dass jemand den Zusammenhang erkennt. Die Adresse haengt dagegen am Konto
-  selbst: Konto angelegt, Schreibrecht da.
-
-  Bedingung dafuer ist, dass niemand sich selbst ein Konto anlegen kann,
-  sonst traegt sich jemand mit einer erfundenen @elektrains.ch-Adresse ein.
-  Darum muss unter Authentication -> Einstellungen -> Nutzeraktionen der
-  Haken bei "Erstellen (Registrierung)" entfernt bleiben. Konten legt nur
-  die Konsole an.
+  Die Konsole arbeitet mit Administratorrechten und ignoriert diese Regeln.
+  Selbst wenn der Knoten einmal leer ist, kommt man ueber die Konsole wieder
+  hinein - aussperren kann man sich nicht.
 
 werkstattAufgaben/$aufgabe/erledigt und /erledigtAm
-  Die erste Ausnahme fuer den Wandbildschirm, der anonym angemeldet ist. In
-  der Realtime Database darf eine Regel weiter unten erlauben, was weiter
-  oben verweigert wird. Titel, Beschreibung, Termin und Zuweisung bleiben
-  gesperrt; neue Aufgaben anlegen oder loeschen geht vom Bildschirm aus
-  nicht.
+  Die erste Ausnahme fuer den Wandbildschirm, der anonym angemeldet ist und
+  darum nicht in der zugriff-Liste steht. In der Realtime Database darf eine
+  Regel weiter unten erlauben, was weiter oben verweigert wird. Titel,
+  Beschreibung, Termin und Zuweisung bleiben gesperrt; neue Aufgaben anlegen
+  oder loeschen geht vom Bildschirm aus nicht.
 
 infoboard/$eintrag/teilnehmer/$name
   Die zweite und letzte Ausnahme: wer sich fuer einen Anlass eintraegt,
@@ -81,30 +101,46 @@ infoboard/$eintrag/teilnehmer/$name
   Mitteilung bleiben gesperrt.
 
 
-WER DARF WAS (Stand 14.11.2026)
--------------------------------
-timo.hunziker@elektrains.ch      alles
-christoph.baillif@elektrains.ch  alles
-lukas.baumann@elektrains.ch      alles
-(anonym)                         nur abhaken und anmelden - der Wandbildschirm
+DER KNOTEN ZUGRIFF
+------------------
+Unter Realtime Database -> Daten, auf oberster Ebene:
 
-Eine neue Person bekommt in der Konsole ein Konto auf @elektrains.ch, mehr
-braucht es nicht. Wer das Schreibrecht verlieren soll, dessen Konto wird in
-der Konsole deaktiviert oder geloescht.
+zugriff
+  <uid timo.hunziker@elektrains.ch>: true
+  <uid christoph.baillif@elektrains.ch>: true
+  <uid lukas.baumann@elektrains.ch>: true
 
-Das anonyme Konto nicht loeschen - das ist der Wandbildschirm. Er meldet
+Die uid steht unter Authentication -> Users in der letzten Spalte; die
+Anzeige kuerzt sie ab, das Kopiersymbol daneben gibt die ganze Folge aus
+rund 28 Zeichen. Ein Tippfehler wirkt wie "nicht auf der Liste".
+
+Neue Person: Konto in der Konsole anlegen UND eine Zeile hier ergaenzen.
+Der zweite Schritt ist der, der vergessen wird - das Zeichen dafuer ist,
+dass die neue Kollegin sich anmelden kann, alles sieht und beim Speichern
+eine rote Meldung bekommt.
+
+Das anonyme Konto gehoert NICHT in die Liste. Es ist der Wandbildschirm und
+hat seine zwei Ausnahmen oben. Loeschen sollte man es auch nicht - er meldet
 sich zwar von selbst neu an, waere aber bis zum naechsten Neuladen stumm.
 
 
-HINWEIS ZUR ANONYMEN ANMELDUNG
-------------------------------
-"Automatische Bereinigung" ist bewusst AUS. Sie wuerde anonyme Konten nach
-30 Tagen loeschen; das Konto des Wandbildschirms waere dann weg und das
-Abhaken schluege fehl, bis jemand die Seite neu laedt.
+WAS BEWUSST OFFEN BLEIBT
+------------------------
+Der Wandbildschirm ist anonym angemeldet, und das kann jeder sein, der die
+Dashboard-Adresse kennt. In den Grenzen der zwei Ausnahmen heisst das: man
+koennte von aussen eine Aufgabe abhaken oder eine fremde Anmeldung aendern.
+Mehr nicht - der Tagesplan, die Kontrollen, die Service-Abos und die
+Einstellungen sind gesperrt. Fuer eine Liste "Lager aufraeumen" ist das die
+richtige Abwaegung; ein Login am Bildschirm in der Werkstatt waere laestiger
+als der Schaden, den jemand damit anrichten koennte.
 
 Anbieter "Ueber Google anmelden" bewusst NICHT aktiviert: er wuerde jedem
 Google-Nutzer ein Konto im Projekt oeffnen, und die Management-App hat gar
 keinen Google-Knopf.
+
+"Automatische Bereinigung" der anonymen Konten ist bewusst AUS. Sie wuerde
+sie nach 30 Tagen loeschen; das Konto des Wandbildschirms waere dann weg
+und das Abhaken schluege fehl, bis jemand die Seite neu laedt.
 
 
 FRUEHERE FASSUNGEN
@@ -115,6 +151,10 @@ FRUEHERE FASSUNGEN
 
 2. ".write": "auth != null && auth.token.firebase.sign_in_provider != 'anonymous'"
    Schloss die anonymen Konten aus, vertraute aber jedem angemeldeten Konto.
+
+3. ".write": "... auth.token.email ... endsWith('@elektrains.ch')"
+   Siehe oben: setzt voraus, dass die Registrierung abgeschaltet ist, und
+   das nimmt dem Wandbildschirm die Anmeldung.
 
 Die Konsole fuehrt unter Realtime Database -> Regeln eine Versionshistorie.
 Jede dieser Fassungen laesst sich mit zwei Klicks zurueckholen.
