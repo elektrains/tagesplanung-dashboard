@@ -9,7 +9,7 @@ AKTIV
 {
   "rules": {
     ".read": true,
-    ".write": "auth != null && root.child('zugriff').child(auth.uid).val() == true",
+    ".write": "auth != null && auth.token.email != null && auth.token.email.toLowerCase().endsWith('@elektrains.ch')",
 
     "werkstattAufgaben": {
       "$aufgabe": {
@@ -44,27 +44,34 @@ WAS DIE ZEILEN TUN
   Bleibt offen. Reading-App und Wandbildschirm haben keinen Login und
   brauchen das.
 
-.write mit der Liste unter zugriff
-  Schreiben darf nur, wessen Benutzerkennung (uid) im Knoten "zugriff" steht
-  und dort auf true gesetzt ist. Vorher hiess die Regel "wer nicht anonym
-  angemeldet ist" - das traf auf jedes Konto zu, das im Projekt existiert
-  oder dort angelegt werden koennte. Jetzt zaehlt die namentliche Liste.
+.write mit der Adresse auf @elektrains.ch
+  Schreiben darf, wer mit einer Firmenadresse angemeldet ist. Vorher hiess
+  die Regel "wer nicht anonym angemeldet ist" - das traf auf jedes Konto zu,
+  das im Projekt existiert oder dort angelegt werden koennte.
 
-  Die Liste liegt bewusst in der Datenbank und nicht im Regeltext: einen
-  neuen Projektleiter aufzunehmen heisst dann, eine Zeile unter zugriff zu
-  ergaenzen, statt die Regeln neu zu schreiben. Die Liste selbst steht unter
-  derselben Regel, nur wer schon drin ist, kann sie aendern.
+  Das anonyme Konto des Wandbildschirms hat gar keine Adresse und faellt
+  damit von selbst heraus; auth.token.email ist dort null, darum die
+  Abfrage davor.
 
-  Die Konsole arbeitet mit Administratorrechten und ignoriert diese Regeln.
-  Selbst wenn der Knoten einmal leer ist, kommt man ueber die Konsole wieder
-  hinein - niemand kann sich also selbst aussperren.
+  Diese Fassung ersetzt einen Entwurf mit einer Liste einzelner uids. Die
+  Liste waere einen Tick enger gewesen, haette aber bei jeder neuen Person
+  einen zweiten Handgriff verlangt - und der wird vergessen. Dann meldet
+  sich die neue Kollegin an, sieht alles und kann nichts speichern, ohne
+  dass jemand den Zusammenhang erkennt. Die Adresse haengt dagegen am Konto
+  selbst: Konto angelegt, Schreibrecht da.
+
+  Bedingung dafuer ist, dass niemand sich selbst ein Konto anlegen kann,
+  sonst traegt sich jemand mit einer erfundenen @elektrains.ch-Adresse ein.
+  Darum muss unter Authentication -> Einstellungen -> Nutzeraktionen der
+  Haken bei "Erstellen (Registrierung)" entfernt bleiben. Konten legt nur
+  die Konsole an.
 
 werkstattAufgaben/$aufgabe/erledigt und /erledigtAm
-  Die erste Ausnahme fuer den Wandbildschirm, der anonym angemeldet ist und
-  darum nicht in der zugriff-Liste steht. In der Realtime Database darf eine
-  Regel weiter unten erlauben, was weiter oben verweigert wird. Titel,
-  Beschreibung, Termin und Zuweisung bleiben gesperrt; neue Aufgaben anlegen
-  oder loeschen geht vom Bildschirm aus nicht.
+  Die erste Ausnahme fuer den Wandbildschirm, der anonym angemeldet ist. In
+  der Realtime Database darf eine Regel weiter unten erlauben, was weiter
+  oben verweigert wird. Titel, Beschreibung, Termin und Zuweisung bleiben
+  gesperrt; neue Aufgaben anlegen oder loeschen geht vom Bildschirm aus
+  nicht.
 
 infoboard/$eintrag/teilnehmer/$name
   Die zweite und letzte Ausnahme: wer sich fuer einen Anlass eintraegt,
@@ -74,34 +81,26 @@ infoboard/$eintrag/teilnehmer/$name
   Mitteilung bleiben gesperrt.
 
 
-DER KNOTEN ZUGRIFF
-------------------
-Unter Realtime Database -> Daten, auf oberster Ebene:
+WER DARF WAS (Stand 14.11.2026)
+-------------------------------
+timo.hunziker@elektrains.ch      alles
+christoph.baillif@elektrains.ch  alles
+lukas.baumann@elektrains.ch      alles
+(anonym)                         nur abhaken und anmelden - der Wandbildschirm
 
-zugriff
-  <uid des ersten Projektleiters>: true
-  <uid des zweiten Projektleiters>: true
-  ...
+Eine neue Person bekommt in der Konsole ein Konto auf @elektrains.ch, mehr
+braucht es nicht. Wer das Schreibrecht verlieren soll, dessen Konto wird in
+der Konsole deaktiviert oder geloescht.
 
-Die uid steht unter Authentication -> Users in der Spalte "Nutzer-UID"; sie
-ist eine Folge aus rund 28 Buchstaben und Ziffern. Jede Person, die im
-Management etwas aendern darf, braucht eine Zeile. Wer herausfaellt, dessen
-Zeile wird geloescht - das Konto kann bestehen bleiben, es kann dann nur
-noch lesen.
-
-Reihenfolge beim Einrichten: zuerst den Knoten zugriff anlegen, dann die
-Regeln veroeffentlichen. Umgekehrt stuende die Management-App fuer ein paar
-Minuten ohne Schreibrecht da.
+Das anonyme Konto nicht loeschen - das ist der Wandbildschirm. Er meldet
+sich zwar von selbst neu an, waere aber bis zum naechsten Neuladen stumm.
 
 
-EMPFEHLUNG DAZU
----------------
-Unter Authentication -> Einstellungen -> Nutzeraktionen den Haken bei
-"Erstellen (Registrierung)" entfernen. Sonst kann sich jemand mit dem
-oeffentlichen Projektschluessel - der steht im Quelltext jeder Seite und
-muss das auch - selbst ein Konto anlegen. Mit der zugriff-Liste bekaeme er
-zwar kein Schreibrecht mehr, aber ein Konto, das niemand bestellt hat,
-braucht es gar nicht erst.
+HINWEIS ZUR ANONYMEN ANMELDUNG
+------------------------------
+"Automatische Bereinigung" ist bewusst AUS. Sie wuerde anonyme Konten nach
+30 Tagen loeschen; das Konto des Wandbildschirms waere dann weg und das
+Abhaken schluege fehl, bis jemand die Seite neu laedt.
 
 Anbieter "Ueber Google anmelden" bewusst NICHT aktiviert: er wuerde jedem
 Google-Nutzer ein Konto im Projekt oeffnen, und die Management-App hat gar
