@@ -9,7 +9,7 @@ AKTIV
 {
   "rules": {
     ".read": true,
-    ".write": "auth != null && root.child('zugriff').child(auth.uid).val() == true",
+    ".write": "auth != null && root.child('zugriff').child(auth.uid).exists()",
 
     "werkstattAufgaben": {
       "$aufgabe": {
@@ -75,7 +75,11 @@ WAS DIE ZEILEN TUN
 
 .write mit der Liste unter zugriff
   Schreiben darf nur, wessen Benutzerkennung (uid) im Knoten "zugriff"
-  steht und dort auf true gesetzt ist.
+  steht. Geprueft wird allein, ob die Zeile da ist - exists() statt eines
+  Vergleichs auf true. Die Konsole speichert einen eingetippten Wert je
+  nach Feld als Text oder als Wahrheitswert, und "true" als Text waere
+  nicht dasselbe wie true. Zeile da heisst darf, Zeile weg heisst darf
+  nicht; der Wert selbst spielt keine Rolle.
 
   Die Liste liegt in der Datenbank und nicht im Regeltext: einen neuen
   Projektleiter aufzunehmen heisst dann, eine Zeile zu ergaenzen, statt die
