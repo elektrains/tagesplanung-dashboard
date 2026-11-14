@@ -32,9 +32,16 @@ body{
 .topbar{background:#111318;border-bottom:calc(2px * var(--s)) solid var(--accent);
   display:flex;align-items:center;gap:calc(14px * var(--s));
   padding:calc(10px * var(--s)) calc(18px * var(--s));flex-shrink:0;}
-.marke{font-size:calc(12px * var(--s));font-weight:700;color:var(--text2);letter-spacing:.5px;text-transform:uppercase;line-height:1.25;}
+.marke{font-size:calc(12px * var(--s));font-weight:700;color:var(--text2);letter-spacing:.5px;text-transform:uppercase;line-height:1.25;flex-shrink:0;white-space:nowrap;}
 .marke span{display:block;font-size:calc(9px * var(--s));font-weight:400;color:var(--text3);letter-spacing:1px;}
 .tag-nav{display:flex;align-items:center;gap:calc(8px * var(--s));margin-left:calc(10px * var(--s));}
+/* Reiter: Tagesplan oder Ämtli. Erscheinen erst, wenn Ämtli erfasst sind. */
+.reiter{display:none;gap:calc(5px * var(--s));margin-left:calc(8px * var(--s));flex-shrink:0;}
+.reiter-btn{background:var(--bg3);border:1px solid var(--border);color:var(--text3);cursor:pointer;
+  padding:calc(8px * var(--s)) calc(13px * var(--s));border-radius:var(--radius);
+  font-size:calc(12px * var(--s));font-weight:700;letter-spacing:.5px;text-transform:uppercase;
+  min-height:calc(44px * var(--s));white-space:nowrap;}
+.reiter-btn.aktiv{background:var(--accent);border-color:var(--accent);color:#fff;}
 .nav-btn{background:var(--bg3);border:1px solid var(--border);color:var(--text2);cursor:pointer;
   padding:calc(8px * var(--s)) calc(16px * var(--s));border-radius:var(--radius);
   font-size:calc(15px * var(--s));min-width:calc(46px * var(--s));min-height:calc(44px * var(--s));}
@@ -55,6 +62,9 @@ body{
   background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);
   padding:calc(5px * var(--s)) calc(11px * var(--s));white-space:nowrap;}
 .rueck-hinweis.on{display:block;}
+/* Laeuft der Countdown, tritt er an die Stelle von Uhr und Status: sonst
+   wird die Kopfzeile breiter als der Schirm und schiebt beides hinaus. */
+.rueck-hinweis.on ~ .uhr,.rueck-hinweis.on ~ .status{display:none;}
 
 /* ===== Grundraster ===== */
 .shell{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
@@ -63,7 +73,8 @@ body{
    beiden Listen rechts — sonst bliebe der Plan ein schmaler Streifen. */
 /* Plan oben, gedeckelt auf knapp die halbe Hoehe. Was darunter frei bleibt,
    teilen sich Aufgaben und Infoboard. */
-.inhalt{grid-template-rows:auto auto minmax(0,1fr);}
+/* Plan, Ämtli-Zeile und Aufgaben so hoch wie ihr Inhalt, der Rest ans Infoboard. */
+.inhalt{grid-template-rows:auto auto auto minmax(0,1fr);}
 /* Aufgaben so hoch wie ihr Inhalt, der freie Rest faellt ans Infoboard —
    dort wirkt er wie Platz fuer weitere Mitteilungen statt wie ein Loch. */
 
@@ -76,6 +87,21 @@ body{
   border:1px solid var(--border);border-radius:99px;padding:calc(2px * var(--s)) calc(10px * var(--s));white-space:nowrap;}
 .block-liste{overflow:hidden;display:flex;flex-direction:column;gap:calc(6px * var(--s));}
 .leer{padding:calc(12px * var(--s));text-align:center;color:var(--text3);font-size:calc(12px * var(--s));}
+
+/* ===== Ämtli ===== */
+.inhalt-liste{flex:1;display:none;flex-direction:column;overflow:hidden;min-height:0;}
+.amt{display:flex;align-items:center;gap:calc(12px * var(--s));
+  background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);
+  padding:calc(8px * var(--s)) calc(12px * var(--s));}
+.amt-text{flex:1;min-width:0;}
+.amt-titel{font-weight:600;font-size:calc(14px * var(--s));}
+.amt-zeit{font-size:calc(11px * var(--s));color:var(--text3);margin-top:calc(2px * var(--s));}
+.amt-wer{display:flex;align-items:center;gap:calc(6px * var(--s));flex-wrap:wrap;flex-shrink:0;}
+.amt-gruppe{margin-bottom:calc(12px * var(--s));display:flex;flex-direction:column;gap:calc(5px * var(--s));}
+.amt-tag{font-size:calc(11px * var(--s));font-weight:700;text-transform:uppercase;letter-spacing:1px;
+  color:var(--text3);padding-bottom:calc(2px * var(--s));}
+.amt-gruppe.heute .amt-tag{color:#ff8a8d;}
+.amt-gruppe.heute .amt{border-color:var(--accent);}
 
 /* ===== Tagesplan: die gewohnte Matrix ===== */
 /* Der Plan bekommt hoechstens knapp die halbe Hoehe. Passt die Tabelle
@@ -219,6 +245,10 @@ body{
 <div class="shell" id="shell" style="display:none">
   <div class="topbar">
     <div class="marke">Infoboard<span>Elektra Ins AG</span></div>
+    <div class="reiter" id="reiter">
+      <button class="reiter-btn aktiv" id="reiterPlan" onclick="ansichtWechseln('plan')">Plan</button>
+      <button class="reiter-btn" id="reiterAemtli" onclick="ansichtWechseln('aemtli')">Ämtli</button>
+    </div>
     <div class="tag-nav">
       <button class="nav-btn" onclick="tagWechseln(-1)">‹</button>
       <button class="nav-btn klein" onclick="aufHeute()">Heute</button>
@@ -235,8 +265,15 @@ body{
     </div>
   </div>
 
-  <div class="inhalt">
+  <div class="inhalt" id="ansichtPlan">
     <div class="plan-box"><div class="plan-fit" id="planFit"></div></div>
+
+    <div class="block" id="blockAemtliHeute" style="display:none">
+      <div class="block-kopf">
+        <div class="block-titel" id="aemtliHeuteTitel">Ämtli</div>
+      </div>
+      <div class="block-liste" id="aemtliHeuteListe"></div>
+    </div>
 
     <div class="block" id="blockAufgaben">
       <div class="block-kopf">
@@ -252,6 +289,16 @@ body{
         <div class="block-zahl" id="infoZahl"></div>
       </div>
       <div class="block-liste" id="infoListe"></div>
+    </div>
+  </div>
+
+  <div class="inhalt-liste" id="ansichtAemtli">
+    <div class="block" style="border-top:none;flex:1;min-height:0">
+      <div class="block-kopf">
+        <div class="block-titel">Ämtli – wer ist zuständig</div>
+        <div class="block-zahl" id="aemtliZahl"></div>
+      </div>
+      <div class="block-liste" id="aemtliListe" style="overflow:hidden"></div>
     </div>
   </div>
 </div>
@@ -302,6 +349,7 @@ const auth = app.auth();
 
 const PFAD_AUFGABEN = 'werkstattAufgaben';
 const PFAD_INFO = 'infoboard';
+const PFAD_AEMTER = 'aemter';
 const ZURUECK_NACH_MS = 30000;          // ohne Berührung zurück auf heute
 const NEULADEN_NACH_OFFLINE_MS = 120000; // Verbindung weg -> Seite neu laden
 
@@ -315,6 +363,8 @@ let state = {
   plans: {},
   aufgaben: {},
   infos: {},
+  aemter: {},
+  ansicht: 'plan',       // 'plan' oder 'aemtli'
   basisSkala: 1.6,
   schreibenGesperrt: null,
   offenerInfo: null,       // Eintrag, dessen Namensauswahl gerade offen ist
@@ -368,6 +418,7 @@ function passeAnHoehe(){
     const ueber=Math.max(
       ueberlauf(document.getElementById('aufgabenListe')),
       ueberlauf(document.getElementById('infoListe')),
+      ueberlauf(document.getElementById('aemtliListe')),
       document.body.scrollHeight-innerHeight
     );
     if(ueber<=1)return;
@@ -411,7 +462,9 @@ setInterval(()=>{
 let rueckTimer=null, countdown=null;
 function beruehrt(){
   clearTimeout(rueckTimer); clearInterval(countdown);
-  if(istHeute()){hinweis(null);return;}
+  // Zurück heisst: heutiger Tag UND der gewohnte Plan. Ein offener Reiter
+  // zählt wie ein verstellter Tag.
+  if(istHeute() && state.ansicht==='plan'){hinweis(null);return;}
   let rest=Math.round(ZURUECK_NACH_MS/1000);
   hinweis(rest);
   countdown=setInterval(()=>{rest--;if(rest>=0)hinweis(rest);},1000);
@@ -420,7 +473,8 @@ function beruehrt(){
 function hinweis(sek){
   const el=document.getElementById('rueckHinweis'); if(!el)return;
   if(sek===null){el.classList.remove('on');return;}
-  el.classList.add('on'); el.textContent='zurück zu heute in '+sek+'s';
+  el.classList.add('on');
+  el.textContent=(state.ansicht==='plan'?'zurück zu heute in ':'zurück zum Plan in ')+sek+'s';
 }
 document.addEventListener('click',beruehrt);
 document.addEventListener('touchstart',beruehrt,{passive:true});
@@ -443,6 +497,12 @@ function listenerStarten(){
     state.infos=s.val()||{};
     zeichneInfo();
     if(state.offenerInfo && !state.offenerName) namenGitterFuellen();
+    passeAnHoehe();
+  });
+  db.ref(PFAD_AEMTER).on('value',s=>{
+    state.aemter=s.val()||{};
+    zeichneAemtliHeute();
+    if(state.ansicht==='aemtli')zeichneAemtli();
     passeAnHoehe();
   });
   db.ref('.info/connected').on('value',s=>setzeOnline(!!s.val()));
@@ -516,12 +576,79 @@ function aufHeute(){
   const n=new Date();
   state.selectedDate=n; state.currentDate=new Date(n.getFullYear(),n.getMonth(),1);
   clearTimeout(rueckTimer); clearInterval(countdown);
+  if(state.ansicht!=='plan')ansichtWechseln('plan');
   zeichne();
 }
 function tagWechseln(r){
   const d=new Date(state.selectedDate); d.setDate(d.getDate()+r);
   state.selectedDate=d; state.currentDate=new Date(d.getFullYear(),d.getMonth(),1);
   zeichne();
+}
+
+// ===== Ämtli =====
+// Wiederkehrende Posten mit Verantwortlichem und Stellvertreter. Anders als
+// die Aufgaben werden sie nicht abgehakt — sie gelten jede Woche neu. Auf dem
+// Startbildschirm steht darum nur, was am gezeigten Tag ansteht; die ganze
+// Liste liegt hinter dem Reiter und fällt nach 30 s von selbst zurück.
+const WOCHENTAGE=[['so','Sonntag'],['mo','Montag'],['di','Dienstag'],['mi','Mittwoch'],
+                  ['do','Donnerstag'],['fr','Freitag'],['sa','Samstag']];
+function wtKuerzel(d){return WOCHENTAGE[d.getDay()][0];}
+function wtName(k){const t=WOCHENTAGE.find(w=>w[0]===k);return t?t[1]:'';}
+function aemterListe(){
+  return Object.entries(state.aemter||{}).sort((a,b)=>(a[1].createdAt||0)-(b[1].createdAt||0));
+}
+function amtZeile(a){
+  return '<div class="amt">'
+    +'<div class="amt-text"><div class="amt-titel">'+esc(a.titel||'')+'</div>'
+    +(a.zeit?'<div class="amt-zeit">'+esc(a.zeit)+'</div>':'')+'</div>'
+    +'<div class="amt-wer">'
+    +(a.verantwortlich?'<span class="chip person">'+esc(a.verantwortlich)+'</span>':'')
+    +(a.stv?'<span class="chip">Stv. '+esc(a.stv)+'</span>':'')
+    +'</div></div>';
+}
+function zeichneAemtliHeute(){
+  const el=document.getElementById('aemtliHeuteListe'); if(!el)return;
+  const alle=aemterListe(), k=wtKuerzel(state.selectedDate);
+  const liste=alle.filter(([,a])=>a.tag===k);
+  document.getElementById('blockAemtliHeute').style.display = liste.length?'flex':'none';
+  document.getElementById('aemtliHeuteTitel').textContent = 'Ämtli · '+wtName(k);
+  el.innerHTML=liste.map(([,a])=>amtZeile(a)).join('');
+  // Der Reiter erscheint erst, wenn es überhaupt Ämtli gibt — sonst führte
+  // er auf eine leere Seite.
+  const r=document.getElementById('reiter'); if(r) r.style.display=alle.length?'flex':'none';
+  if(!alle.length && state.ansicht!=='plan') ansichtWechseln('plan');
+}
+function zeichneAemtli(){
+  const el=document.getElementById('aemtliListe'); if(!el)return;
+  const alle=aemterListe(), heute=wtKuerzel(new Date());
+  document.getElementById('aemtliZahl').textContent = alle.length?alle.length+' Ämtli':'';
+  const reihen=WOCHENTAGE.slice(1).concat([WOCHENTAGE[0]]);   // Montag zuerst, Sonntag zuletzt
+  let html='';
+  reihen.forEach(([k,name])=>{
+    const l=alle.filter(([,a])=>a.tag===k); if(!l.length)return;
+    html+='<div class="amt-gruppe'+(k===heute?' heute':'')+'">'
+      +'<div class="amt-tag">'+name+(k===heute?' · heute':'')+'</div>'
+      +l.map(([,a])=>amtZeile(a)).join('')+'</div>';
+  });
+  const ohne=alle.filter(([,a])=>!WOCHENTAGE.some(w=>w[0]===a.tag));
+  if(ohne.length)html+='<div class="amt-gruppe"><div class="amt-tag">Ohne festen Tag</div>'
+    +ohne.map(([,a])=>amtZeile(a)).join('')+'</div>';
+  el.innerHTML=html||'<div class="leer">Noch keine Ämtli erfasst.</div>';
+}
+function ansichtWechseln(v){
+  state.ansicht=v;
+  const p=document.getElementById('ansichtPlan'), a=document.getElementById('ansichtAemtli');
+  if(p)p.style.display = v==='plan'?'grid':'none';
+  if(a)a.style.display = v==='aemtli'?'flex':'none';
+  document.getElementById('reiterPlan')?.classList.toggle('aktiv',v==='plan');
+  document.getElementById('reiterAemtli')?.classList.toggle('aktiv',v==='aemtli');
+  // Im Ämtli-Reiter blättert man keine Tage — die Pfeile verschwinden und
+  // machen der Kopfzeile Platz.
+  const tn=document.querySelector('.tag-nav'); if(tn)tn.style.display = v==='plan'?'flex':'none';
+  if(v==='aemtli')zeichneAemtli();
+  beruehrt();
+  passeAnHoehe();
+  if(v==='plan')planAnpassen();
 }
 
 // ===== Aufgaben =====
@@ -741,11 +868,13 @@ function dialogSchliessen(){
 // ===== Zeichnen =====
 function zeichne(){
   zeichnePlan();
+  zeichneAemtliHeute();
   zeichneAufgaben();
   zeichneInfo();
+  if(state.ansicht==='aemtli')zeichneAemtli();
   passeAnHoehe();
   planAnpassen();
-  if(!istHeute()) beruehrt(); else hinweis(null);
+  if(!istHeute() || state.ansicht!=='plan') beruehrt(); else hinweis(null);
 }
 
 function meldung(txt,art){
