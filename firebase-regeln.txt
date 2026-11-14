@@ -1,43 +1,15 @@
 Realtime-Database-Regeln
 ========================
 Projekt: elektra-tagesplanung-23b62
-Eingespielt am 13.11.2026, Abhaken auf dem Wandbildschirm verifiziert.
-
-OFFEN - der Block unten ist noch NICHT veroeffentlicht
-------------------------------------------------------
-Geaendert hat sich allein die .validate-Zeile unter
-infoboard/$eintrag/teilnehmer/$name: ein Teilnehmer ist nicht mehr nur ein
-Zeitstempel, sondern traegt seine Antworten auf die Fragen der Mitteilung.
-Am 13.11.2026 nachgemessen: eine Anmeldung mit Antworten wird derzeit mit
-PERMISSION_DENIED abgewiesen. Bis der Block veroeffentlicht ist, kann sich
-niemand fuer eine Mitteilung mit Fragen eintragen.
-
-Konsole -> Realtime Database -> Regeln -> Block ersetzen -> Veroeffentlichen.
-Die alte Form (blosser Zeitstempel) bleibt erlaubt, die bestehenden
-Anmeldungen zum Weihnachtsessen gehen also nicht verloren.
+Stand 14.11.2026
 
 
-VORHER
-------
+AKTIV
+-----
 {
   "rules": {
     ".read": true,
-    ".write": "auth != null"
-  }
-}
-
-Das Problem damit: sobald die anonyme Anmeldung aktiviert ist, erfüllt jeder
-anonyme Besucher "auth != null". Wer die Dashboard-Adresse von der Wand
-abliest, hätte Schreibrechte auf den ganzen Baum gehabt — Tagesplan,
-Kontrollen, Service-Abos, Einstellungen.
-
-
-SOLL-ZUSTAND (dieser Block gehoert in die Konsole)
---------------------------------------------------
-{
-  "rules": {
-    ".read": true,
-    ".write": "auth != null && auth.token.firebase.sign_in_provider != 'anonymous'",
+    ".write": "auth != null && root.child('zugriff').child(auth.uid).val() == true",
 
     "werkstattAufgaben": {
       "$aufgabe": {
@@ -69,57 +41,81 @@ SOLL-ZUSTAND (dieser Block gehoert in die Konsole)
 WAS DIE ZEILEN TUN
 ------------------
 .read: true
-  Bleibt offen. Reading-App und Dashboard haben keinen Login und brauchen das.
+  Bleibt offen. Reading-App und Wandbildschirm haben keinen Login und
+  brauchen das.
 
-.write mit sign_in_provider != 'anonymous'
-  Schreiben nur nach Anmeldung mit Passwort, also aus der Management-App.
-  Anonyme Konten kommen hier nicht durch.
+.write mit der Liste unter zugriff
+  Schreiben darf nur, wessen Benutzerkennung (uid) im Knoten "zugriff" steht
+  und dort auf true gesetzt ist. Vorher hiess die Regel "wer nicht anonym
+  angemeldet ist" - das traf auf jedes Konto zu, das im Projekt existiert
+  oder dort angelegt werden koennte. Jetzt zaehlt die namentliche Liste.
+
+  Die Liste liegt bewusst in der Datenbank und nicht im Regeltext: einen
+  neuen Projektleiter aufzunehmen heisst dann, eine Zeile unter zugriff zu
+  ergaenzen, statt die Regeln neu zu schreiben. Die Liste selbst steht unter
+  derselben Regel, nur wer schon drin ist, kann sie aendern.
+
+  Die Konsole arbeitet mit Administratorrechten und ignoriert diese Regeln.
+  Selbst wenn der Knoten einmal leer ist, kommt man ueber die Konsole wieder
+  hinein - niemand kann sich also selbst aussperren.
 
 werkstattAufgaben/$aufgabe/erledigt und /erledigtAm
-  Die einzige Stelle, an die der Wandbildschirm schreiben darf. In der
-  Realtime Database darf eine Regel weiter unten erlauben, was weiter oben
-  verweigert wird — deshalb wirkt diese Ausnahme trotz der strengeren Zeile
-  darüber. Titel, Beschreibung, Termin und Zuweisung bleiben gesperrt, neue
-  Aufgaben anlegen oder löschen geht vom Bildschirm aus nicht.
-
-.validate
-  newData.isBoolean() lässt bei "erledigt" nur wahr oder falsch zu.
-  Bei "erledigtAm" nur eine Zahl oder das Löschen des Felds (beim
-  Zurücknehmen eines Hakens).
-
-
-infoboard/$eintrag/teilnehmer/$name
-  Die zweite und letzte Stelle fuer den Bildschirm: wer sich fuer einen
-  Anlass eintraegt, schreibt seinen Namen und die Antworten auf die Fragen
-  der Mitteilung (Partner ja/nein, welche Tage, Halbtax).
-  Die Pruefung laesst beides zu: den blossen Zeitstempel aus der ersten
-  Fassung und die neue Form mit ts und antworten. Titel,
-  Text und Datum der Mitteilung bleiben gesperrt, neue Mitteilungen anlegen
+  Die erste Ausnahme fuer den Wandbildschirm, der anonym angemeldet ist und
+  darum nicht in der zugriff-Liste steht. In der Realtime Database darf eine
+  Regel weiter unten erlauben, was weiter oben verweigert wird. Titel,
+  Beschreibung, Termin und Zuweisung bleiben gesperrt; neue Aufgaben anlegen
   oder loeschen geht vom Bildschirm aus nicht.
 
-WARUM DIE UMSTELLUNG NICHTS BRECHEN KONNTE
-------------------------------------------
-Zum Zeitpunkt der Umstellung war die anonyme Anmeldung noch nicht aktiviert,
-es gab also keine anonymen Konten. Für alle bestehenden Apps war die neue
-Regel damit wortgleich mit der alten. Erst danach wurde "Anonym" eingeschaltet.
-
-Reihenfolge war: Regeln veröffentlichen -> Apps antesten -> Anonym aktivieren.
-So entsteht kein Moment, in dem anonyme Konten existieren und noch die alte,
-weite Regel gilt.
+infoboard/$eintrag/teilnehmer/$name
+  Die zweite und letzte Ausnahme: wer sich fuer einen Anlass eintraegt,
+  schreibt seinen Namen und die Antworten auf die Fragen der Mitteilung.
+  Die Pruefung laesst beides zu, den blossen Zeitstempel aus der ersten
+  Fassung und die Form mit ts und antworten. Titel, Text und Datum der
+  Mitteilung bleiben gesperrt.
 
 
-HINWEIS ZUR ANONYMEN ANMELDUNG
-------------------------------
-"Automatische Bereinigung" ist bewusst AUS. Sie würde anonyme Konten nach
-30 Tagen löschen; das Konto des Wandbildschirms wäre dann weg und das Abhaken
-schlüge fehl, bis jemand die Seite neu lädt. Bei einer Handvoll Geräten ist
-das Aufräumen ohnehin unnötig.
-
-Die Dashboard-App meldet sich zusätzlich von selbst neu an, falls sie ihre
-Anmeldung doch einmal verliert (onAuthStateChanged in index.html).
-
-
-FALLS ETWAS KLEMMT
+DER KNOTEN ZUGRIFF
 ------------------
-Die Konsole führt unter Realtime Database -> Regeln eine Versionshistorie.
-Die vorherige Fassung lässt sich mit zwei Klicks zurückholen.
+Unter Realtime Database -> Daten, auf oberster Ebene:
+
+zugriff
+  <uid des ersten Projektleiters>: true
+  <uid des zweiten Projektleiters>: true
+  ...
+
+Die uid steht unter Authentication -> Users in der Spalte "Nutzer-UID"; sie
+ist eine Folge aus rund 28 Buchstaben und Ziffern. Jede Person, die im
+Management etwas aendern darf, braucht eine Zeile. Wer herausfaellt, dessen
+Zeile wird geloescht - das Konto kann bestehen bleiben, es kann dann nur
+noch lesen.
+
+Reihenfolge beim Einrichten: zuerst den Knoten zugriff anlegen, dann die
+Regeln veroeffentlichen. Umgekehrt stuende die Management-App fuer ein paar
+Minuten ohne Schreibrecht da.
+
+
+EMPFEHLUNG DAZU
+---------------
+Unter Authentication -> Einstellungen -> Nutzeraktionen den Haken bei
+"Erstellen (Registrierung)" entfernen. Sonst kann sich jemand mit dem
+oeffentlichen Projektschluessel - der steht im Quelltext jeder Seite und
+muss das auch - selbst ein Konto anlegen. Mit der zugriff-Liste bekaeme er
+zwar kein Schreibrecht mehr, aber ein Konto, das niemand bestellt hat,
+braucht es gar nicht erst.
+
+Anbieter "Ueber Google anmelden" bewusst NICHT aktiviert: er wuerde jedem
+Google-Nutzer ein Konto im Projekt oeffnen, und die Management-App hat gar
+keinen Google-Knopf.
+
+
+FRUEHERE FASSUNGEN
+------------------
+1. ".write": "auth != null"
+   Mit der anonymen Anmeldung des Wandbildschirms haette jeder Besucher der
+   Dashboard-Adresse auf den ganzen Baum schreiben koennen.
+
+2. ".write": "auth != null && auth.token.firebase.sign_in_provider != 'anonymous'"
+   Schloss die anonymen Konten aus, vertraute aber jedem angemeldeten Konto.
+
+Die Konsole fuehrt unter Realtime Database -> Regeln eine Versionshistorie.
+Jede dieser Fassungen laesst sich mit zwei Klicks zurueckholen.
