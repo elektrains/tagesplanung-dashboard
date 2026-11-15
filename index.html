@@ -822,14 +822,16 @@ function zeichneGeburtstage(){
 // ===== Aufgaben =====
 // Im Büro lässt sich eine Aufgabe vorausplanen: bis zu ihrem Tag steht sie
 // nicht am Bildschirm. So kann man eine Woche im Voraus erfassen, ohne dass
-// die Liste in der Werkstatt mit Künftigem zuwächst.
-function aufgabeFaellig(a){return !a.ab || a.ab <= dateKey(new Date());}
+// die Liste im Aufenthaltsraum mit Künftigem zuwächst. Maßstab ist der
+// gezeigte Tag — blättert jemand vor, sieht er, was dort stehen wird.
+function aufgabeFaellig(a,bezug){return !a.ab || a.ab <= dateKey(bezug||state.selectedDate);}
 function istSpaet(a){return !a.erledigt && !!a.termin && a.termin < dateKey(new Date());}
 function personen(a){return Array.isArray(a.zugewiesen)?a.zugewiesen:(a.zugewiesen?[a.zugewiesen]:[]);}
 
 function zeichneAufgaben(){
   const el=document.getElementById('aufgabenListe'); if(!el)return;
-  const liste=Object.entries(state.aufgaben||{}).filter(([,a])=>aufgabeFaellig(a)).sort((a,b)=>{
+  const bezug=state.selectedDate;
+  const liste=Object.entries(state.aufgaben||{}).filter(([,a])=>aufgabeFaellig(a,bezug)).sort((a,b)=>{
     const A=a[1],B=b[1];
     if(!!A.erledigt!==!!B.erledigt)return A.erledigt?1:-1;
     const at=A.termin||'9999-99-99', bt=B.termin||'9999-99-99';
@@ -878,16 +880,16 @@ function aufgabeUmschalten(id){
 // Namensliste dazu, in die sich am Bildschirm jeder selbst einträgt.
 // Eine Mitteilung kann ein Fenster haben: vor "ab" erscheint sie nicht, nach
 // "bis" blendet sie sich selbst aus. Ohne beides steht sie, bis sie im
-// Management entfernt wird.
-function infoSichtbar(i){
-  const heute=dateKey(new Date());
-  return (!i.ab || i.ab <= heute) && (!i.bis || i.bis >= heute);
+// Management entfernt wird. Gemessen am gezeigten Tag, wie bei den Aufgaben.
+function infoSichtbar(i,bezug){
+  const tag=dateKey(bezug||state.selectedDate);
+  return (!i.ab || i.ab <= tag) && (!i.bis || i.bis >= tag);
 }
 
 function zeichneInfo(){
   const el=document.getElementById('infoListe'); if(!el)return;
   const liste=Object.entries(state.infos||{})
-    .filter(([,i])=>infoSichtbar(i))
+    .filter(([,i])=>infoSichtbar(i,state.selectedDate))
     .sort((a,b)=>(a[1].createdAt||0)-(b[1].createdAt||0));
 
   document.getElementById('infoZahl').textContent = liste.length? liste.length+(liste.length===1?' Mitteilung':' Mitteilungen') : '';
