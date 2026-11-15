@@ -627,21 +627,31 @@ function zeichnePlan(){
   planAnpassen();
 }
 
-// Die Matrix wird fuer sich allein passend gerechnet: sie darf breiter und
-// hoeher sein als ihr Kasten und wird dann heruntergerechnet. So bleibt der
-// Platz darunter fuer Aufgaben und Infoboard unangetastet.
+// Die Matrix wird fuer sich allein gerechnet und dann auf die Breite
+// gezogen - in beide Richtungen. Ein schmaler Tag wird groesser geschrieben
+// statt rechts Platz liegen zu lassen, ein breiter kleiner. Begrenzt wird
+// das durch die Hoehe, die ihr die CSS zugesteht (max-height der plan-box):
+// was die Matrix mehr nimmt, fehlt unten bei Aufgaben und Infoboard.
+//
+// transform veraendert den Platzbedarf im Layout nicht. Damit der Kasten
+// genau so hoch wird wie die gezeichnete Matrix - ohne Loch darunter und
+// ohne abgeschnittenen Rand -, wird die Differenz als Aussenabstand
+// nachgereicht.
 function planAnpassen(){
   const box=document.querySelector('.plan-box'), fit=document.getElementById('planFit');
   if(!box||!fit)return;
-  fit.style.transform='none';
+  fit.style.transform='none'; fit.style.marginBottom='0px';
   const t=fit.querySelector('.plan-table'); if(!t)return;
   const bs=getComputedStyle(box);
   const bw=box.clientWidth - parseFloat(bs.paddingLeft) - parseFloat(bs.paddingRight);
-  const bh=box.clientHeight - parseFloat(bs.paddingTop) - parseFloat(bs.paddingBottom);
+  const padY=parseFloat(bs.paddingTop) + parseFloat(bs.paddingBottom);
+  const deckel=parseFloat(bs.maxHeight);
+  const bh=(isNaN(deckel)?box.clientHeight:deckel) - padY;
   const tw=t.scrollWidth, th=t.scrollHeight;
-  if(tw<=0||th<=0)return;
-  const k=Math.min(1, bw/tw, bh/th);
-  fit.style.transform = k<1 ? 'scale('+k+')' : 'none';
+  if(tw<=0||th<=0||bw<=0||bh<=0)return;
+  const k=Math.min(bw/tw, bh/th);
+  fit.style.transform='scale('+k+')';
+  fit.style.marginBottom=Math.round(th*(k-1))+'px';
 }
 function aufHeute(){
   const n=new Date();
