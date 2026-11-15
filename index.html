@@ -195,7 +195,7 @@ body{
 .dialog-koerper{overflow-y:auto;margin-bottom:calc(14px * var(--s));}
 .aus{display:flex;gap:calc(5px * var(--s));flex-wrap:wrap;margin-top:calc(6px * var(--s));}
 /* ===== Aufgaben ===== */
-.auf{display:flex;align-items:flex-start;gap:calc(12px * var(--s));
+.auf{display:flex;align-items:flex-start;flex-wrap:wrap;gap:calc(12px * var(--s));
   padding:calc(9px * var(--s)) calc(12px * var(--s));border-radius:var(--radius);
   background:var(--bg3);border:1px solid transparent;cursor:pointer;}
 .auf:active{background:var(--bg4);border-color:var(--accent);}
@@ -204,10 +204,13 @@ body{
   border:calc(2px * var(--s)) solid var(--text3);border-radius:50%;
   display:flex;align-items:center;justify-content:center;
   font-size:calc(15px * var(--s));color:transparent;}
-.auf-text{flex:1;min-width:0;}
+/* Viele Namen duerfen umbrechen, der Text behaelt dabei seine Breite:
+   sonst wird er zu einer Saeule aus einzelnen Woertern gequetscht. */
+.auf-text{flex:1 1 calc(240px * var(--s));min-width:calc(180px * var(--s));}
 .auf-titel{font-weight:600;font-size:calc(14px * var(--s));}
 .auf-besch{font-size:calc(12px * var(--s));color:var(--text2);margin-top:calc(2px * var(--s));}
-.auf-meta{display:flex;align-items:center;gap:calc(6px * var(--s));flex-wrap:wrap;flex-shrink:0;}
+.auf-meta{display:flex;align-items:center;justify-content:flex-end;
+  gap:calc(6px * var(--s));flex-wrap:wrap;min-width:0;}
 .chip{font-size:calc(11px * var(--s));background:var(--bg4);border:1px solid var(--border2);color:var(--text2);
   padding:calc(2px * var(--s)) calc(10px * var(--s));border-radius:99px;white-space:nowrap;}
 .chip.rot{background:var(--red);border-color:var(--red);color:#fff;font-weight:700;}
