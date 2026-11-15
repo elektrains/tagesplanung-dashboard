@@ -79,7 +79,8 @@ body{
    teilen sich Aufgaben und Infoboard. */
 /* Plan, Ämtli-Zeile, Aufgaben und die Termine unten so hoch wie ihr Inhalt;
    was frei bleibt, faellt ans Infoboard. */
-.inhalt{grid-template-rows:auto auto auto minmax(0,1fr) auto;}
+/* Dazu zuoberst der Geburtstagsbanner, der fast immer leer ist. */
+.inhalt{grid-template-rows:auto auto auto auto minmax(0,1fr) auto;}
 /* Aufgaben so hoch wie ihr Inhalt, der freie Rest faellt ans Infoboard —
    dort wirkt er wie Platz fuer weitere Mitteilungen statt wie ein Loch. */
 
@@ -107,6 +108,20 @@ body{
   color:var(--text3);padding-bottom:calc(2px * var(--s));}
 .amt-gruppe.heute .amt-tag{color:#ff8a8d;}
 .amt-gruppe.heute .amt{border-color:var(--accent);}
+
+/* ===== Geburtstag ===== */
+/* Steht nur am Tag selbst da - darum oben und in Rot. Das Alter kommt
+   nicht an die Wand, angezeigt werden Tag und Monat. */
+.geburtstag{background:rgba(239,68,68,0.14);
+  border-top:calc(2px * var(--s)) solid var(--red);
+  border-bottom:calc(2px * var(--s)) solid var(--red);
+  padding:calc(10px * var(--s)) calc(18px * var(--s));
+  display:flex;flex-wrap:wrap;align-items:baseline;
+  gap:calc(4px * var(--s)) calc(26px * var(--s));}
+.gb{display:flex;align-items:baseline;gap:calc(10px * var(--s));}
+.gb-text{font-size:calc(21px * var(--s));font-weight:700;color:var(--red);}
+.gb-datum{font-size:calc(13px * var(--s));color:var(--red);opacity:.75;
+  font-variant-numeric:tabular-nums;}
 
 /* ===== Termine ===== */
 .termin{display:flex;align-items:center;gap:calc(12px * var(--s));
@@ -288,6 +303,8 @@ body{
   </div>
 
   <div class="inhalt" id="ansichtPlan">
+    <div class="geburtstag" id="blockGeburtstag" style="display:none"></div>
+
     <div class="plan-box"><div class="plan-fit" id="planFit"></div></div>
 
     <div class="block" id="blockAemtliHeute" style="display:none">
@@ -769,6 +786,39 @@ function ansichtWechseln(v){
   if(v==='plan')planAnpassen();
 }
 
+// ===== Geburtstage =====
+// Erfasst werden sie im Management beim Mitarbeiter. Gefeiert wird jedes
+// Jahr, verglichen werden darum nur Tag und Monat.
+function gbTagMonat(k,refKey){
+  if(!k)return '';
+  const td=k.slice(5);
+  if(td!=='02-29')return td;
+  // Am 29. Februar Geborene feiern in gewöhnlichen Jahren am 28.
+  return new Date(+refKey.slice(0,4),1,29).getDate()===29 ? '02-29' : '02-28';
+}
+function geburtstagsKinder(refKey){
+  const inaktiv=state.inactiveEmployees||[], daten=state.employeeDates||{};
+  return (state.employees||[]).filter(e=>{
+    const d=daten[e]||{};
+    if(!d.geburtstag || inaktiv.includes(e))return false;
+    if(d.austritt && d.austritt<=refKey)return false;
+    if(d.eintritt && d.eintritt>refKey)return false;
+    return gbTagMonat(d.geburtstag,refKey)===refKey.slice(5);
+  });
+}
+// Folgt dem gezeigten Tag, wie der Termin-Streifen unten auch.
+function zeichneGeburtstage(){
+  const el=document.getElementById('blockGeburtstag'); if(!el)return;
+  const refKey=dateKey(state.selectedDate);
+  const liste=geburtstagsKinder(refKey);
+  el.style.display=liste.length?'flex':'none';
+  el.innerHTML=liste.map(name=>{
+    const g=(state.employeeDates||{})[name].geburtstag.split('-');
+    return `<div class="gb"><span class="gb-text">Happy Birthday ${esc(name)} 🥳</span>`
+      +`<span class="gb-datum">${g[2]}.${g[1]}.</span></div>`;
+  }).join('');
+}
+
 // ===== Aufgaben =====
 // Im Büro lässt sich eine Aufgabe vorausplanen: bis zu ihrem Tag steht sie
 // nicht am Bildschirm. So kann man eine Woche im Voraus erfassen, ohne dass
@@ -993,6 +1043,7 @@ function dialogSchliessen(){
 // ===== Zeichnen =====
 function zeichne(){
   zeichnePlan();
+  zeichneGeburtstage();
   zeichneAemtliHeute();
   zeichneAufgaben();
   zeichneInfo();
