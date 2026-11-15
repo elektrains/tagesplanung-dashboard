@@ -653,24 +653,24 @@ function tageBis(iso,bezug){
   const n=bezug||new Date();
   return Math.round((new Date(y,m-1,d) - new Date(n.getFullYear(),n.getMonth(),n.getDate()))/86400000);
 }
-// "heute" und "morgen" stimmen nur, solange der gezeigte Tag der heutige
-// ist — sonst wäre es gelogen.
-function terminWann(n,vonHeute){
+// Alles aus Sicht des gezeigten Tages: faellt der Termin darauf, steht
+// "Heute" da — auch wenn jemand vorgeblaettert hat. Welcher Tag gemeint
+// ist, sagt das Datum links daneben.
+function terminWann(n){
   if(n<0)return 'vorbei';
-  if(n===0)return vonHeute?'heute':'an diesem Tag';
-  if(n===1&&vonHeute)return 'morgen';
-  return 'in '+n+' Tag'+(n===1?'':'en');
+  if(n===0)return 'Heute';
+  if(n===1)return 'Morgen';
+  return 'in '+n+' Tagen';
 }
 function kommendeTermine(){return terminListe().filter(([,t])=>tageBis(t.datum)>=0);}
 function terminZeile(t,bezug){
   const n=tageBis(t.datum,bezug), [y,m,d]=t.datum.split('-');
-  const vonHeute=!bezug||dateKey(bezug)===dateKey(new Date());
   const wt=['So','Mo','Di','Mi','Do','Fr','Sa'][new Date(+y,+m-1,+d).getDay()];
   return '<div class="termin'+(n===0?' heute':'')+'">'
     +'<div class="termin-datum"><span class="termin-wt">'+wt+'</span>'+d+'.'+m+'.'+y+'</div>'
     +'<div class="termin-text"><div class="termin-titel">'+esc(t.titel||'')+'</div>'
     +(t.zeit?'<div class="termin-zeit">'+esc(t.zeit)+'</div>':'')+'</div>'
-    +'<span class="chip'+(n===0?' rot':'')+'">'+terminWann(n,vonHeute)+'</span></div>';
+    +'<span class="chip'+(n===0?' rot':'')+'">'+terminWann(n)+'</span></div>';
 }
 // Unten am Startbildschirm, was vom gezeigten Tag aus in der nächsten Woche
 // liegt. Am Tag des Termins steht er rot da.
