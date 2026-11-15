@@ -770,12 +770,16 @@ function ansichtWechseln(v){
 }
 
 // ===== Aufgaben =====
+// Im Büro lässt sich eine Aufgabe vorausplanen: bis zu ihrem Tag steht sie
+// nicht am Bildschirm. So kann man eine Woche im Voraus erfassen, ohne dass
+// die Liste in der Werkstatt mit Künftigem zuwächst.
+function aufgabeFaellig(a){return !a.ab || a.ab <= dateKey(new Date());}
 function istSpaet(a){return !a.erledigt && !!a.termin && a.termin < dateKey(new Date());}
 function personen(a){return Array.isArray(a.zugewiesen)?a.zugewiesen:(a.zugewiesen?[a.zugewiesen]:[]);}
 
 function zeichneAufgaben(){
   const el=document.getElementById('aufgabenListe'); if(!el)return;
-  const liste=Object.entries(state.aufgaben||{}).sort((a,b)=>{
+  const liste=Object.entries(state.aufgaben||{}).filter(([,a])=>aufgabeFaellig(a)).sort((a,b)=>{
     const A=a[1],B=b[1];
     if(!!A.erledigt!==!!B.erledigt)return A.erledigt?1:-1;
     const at=A.termin||'9999-99-99', bt=B.termin||'9999-99-99';
@@ -822,9 +826,12 @@ function aufgabeUmschalten(id){
 // ===== Infoboard =====
 // Eine Mitteilung ist zunächst nur Text. Ist "anmeldung" gesetzt, kommt eine
 // Namensliste dazu, in die sich am Bildschirm jeder selbst einträgt.
+// Eine Mitteilung kann ein Fenster haben: vor "ab" erscheint sie nicht, nach
+// "bis" blendet sie sich selbst aus. Ohne beides steht sie, bis sie im
+// Management entfernt wird.
 function infoSichtbar(i){
   const heute=dateKey(new Date());
-  return !i.bis || i.bis >= heute;     // abgelaufene blenden sich selbst aus
+  return (!i.ab || i.ab <= heute) && (!i.bis || i.bis >= heute);
 }
 
 function zeichneInfo(){
