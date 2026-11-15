@@ -646,34 +646,42 @@ function terminListe(){
     .sort((a,b)=>a[1].datum<b[1].datum?-1:a[1].datum>b[1].datum?1:(a[1].createdAt||0)-(b[1].createdAt||0));
 }
 // Ganze Tage bis zum Termin, von Mitternacht zu Mitternacht gerechnet —
-// sonst hinge das Ergebnis an der Uhrzeit.
-function tageBis(iso){
+// sonst hinge das Ergebnis an der Uhrzeit. Bezug ist der gezeigte Tag:
+// blättert jemand vor, soll er sehen, was von dort aus ansteht.
+function tageBis(iso,bezug){
   const [y,m,d]=iso.split('-').map(Number);
-  const n=new Date();
+  const n=bezug||new Date();
   return Math.round((new Date(y,m-1,d) - new Date(n.getFullYear(),n.getMonth(),n.getDate()))/86400000);
 }
-function terminWann(n){
-  if(n===0)return 'heute';
-  if(n===1)return 'morgen';
+// "heute" und "morgen" stimmen nur, solange der gezeigte Tag der heutige
+// ist — sonst wäre es gelogen.
+function terminWann(n,vonHeute){
   if(n<0)return 'vorbei';
-  return 'in '+n+' Tagen';
+  if(n===0)return vonHeute?'heute':'an diesem Tag';
+  if(n===1&&vonHeute)return 'morgen';
+  return 'in '+n+' Tag'+(n===1?'':'en');
 }
 function kommendeTermine(){return terminListe().filter(([,t])=>tageBis(t.datum)>=0);}
-function terminZeile(t){
-  const n=tageBis(t.datum), [y,m,d]=t.datum.split('-');
+function terminZeile(t,bezug){
+  const n=tageBis(t.datum,bezug), [y,m,d]=t.datum.split('-');
+  const vonHeute=!bezug||dateKey(bezug)===dateKey(new Date());
   const wt=['So','Mo','Di','Mi','Do','Fr','Sa'][new Date(+y,+m-1,+d).getDay()];
   return '<div class="termin'+(n===0?' heute':'')+'">'
     +'<div class="termin-datum"><span class="termin-wt">'+wt+'</span>'+d+'.'+m+'.'+y+'</div>'
     +'<div class="termin-text"><div class="termin-titel">'+esc(t.titel||'')+'</div>'
     +(t.zeit?'<div class="termin-zeit">'+esc(t.zeit)+'</div>':'')+'</div>'
-    +'<span class="chip'+(n===0?' rot':'')+'">'+terminWann(n)+'</span></div>';
+    +'<span class="chip'+(n===0?' rot':'')+'">'+terminWann(n,vonHeute)+'</span></div>';
 }
-// Unten am Startbildschirm nur, was innerhalb der nächsten Woche liegt.
+// Unten am Startbildschirm, was vom gezeigten Tag aus in der nächsten Woche
+// liegt. Am Tag des Termins steht er rot da.
 function zeichneTermineHeute(){
   const el=document.getElementById('termineHeuteListe'); if(!el)return;
-  const liste=kommendeTermine().filter(([,t])=>tageBis(t.datum)<=TERMIN_VORLAUF_TAGE);
+  const bezug=state.selectedDate;
+  const liste=terminListe().filter(([,t])=>{
+    const n=tageBis(t.datum,bezug); return n>=0 && n<=TERMIN_VORLAUF_TAGE;
+  });
   document.getElementById('blockTermine').style.display=liste.length?'flex':'none';
-  el.innerHTML=liste.map(([,t])=>terminZeile(t)).join('');
+  el.innerHTML=liste.map(([,t])=>terminZeile(t,bezug)).join('');
   reiterAnpassen();
 }
 function zeichneTermine(){
