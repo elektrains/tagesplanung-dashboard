@@ -420,6 +420,7 @@ let state = {
   employees: [],
   inactiveEmployees: [],
   employeeDates: {},
+  weitereGeburtstage: [],
   vehicles: [],
   plans: {},
   aufgaben: {},
@@ -552,6 +553,7 @@ function listenerStarten(){
       if(v.vehicles)state.vehicles=v.vehicles;
       if(v.inactiveEmployees)state.inactiveEmployees=v.inactiveEmployees;
       state.employeeDates=v.employeeDates||{};
+      state.weitereGeburtstage=v.weitereGeburtstage||[];
     }
     zeichne();
   });
@@ -792,22 +794,31 @@ function ansichtWechseln(v){
 // ===== Geburtstage =====
 // Erfasst werden sie im Management beim Mitarbeiter. Gefeiert wird jedes
 // Jahr, verglichen werden darum nur Tag und Monat.
+// In der Datenbank steht "MM-TT" ohne Jahr; ganz alte Eintraege hielten noch
+// "JJJJ-MM-TT". Die letzten fünf Zeichen passen bei beiden.
 function gbTagMonat(k,refKey){
   if(!k)return '';
-  const td=k.slice(5);
+  const td=String(k).slice(-5);
   if(td!=='02-29')return td;
   // Am 29. Februar Geborene feiern in gewöhnlichen Jahren am 28.
   return new Date(+refKey.slice(0,4),1,29).getDate()===29 ? '02-29' : '02-28';
 }
+// Mitarbeiter plus die Namen aus "Weitere Geburtstage" im Management -
+// Leute, die nicht in der Tagesplanung stehen (alter Patron, Sekretariat).
 function geburtstagsKinder(refKey){
   const inaktiv=state.inactiveEmployees||[], daten=state.employeeDates||{};
-  return (state.employees||[]).filter(e=>{
+  const td=refKey.slice(5);
+  const liste=(state.employees||[]).filter(e=>{
     const d=daten[e]||{};
     if(!d.geburtstag || inaktiv.includes(e))return false;
     if(d.austritt && d.austritt<=refKey)return false;
     if(d.eintritt && d.eintritt>refKey)return false;
-    return gbTagMonat(d.geburtstag,refKey)===refKey.slice(5);
+    return gbTagMonat(d.geburtstag,refKey)===td;
+  }).map(e=>({name:e,tag:daten[e].geburtstag}));
+  (state.weitereGeburtstage||[]).forEach(w=>{
+    if(w&&w.name&&w.tag&&gbTagMonat(w.tag,refKey)===td)liste.push({name:w.name,tag:w.tag});
   });
+  return liste;
 }
 // Folgt dem gezeigten Tag, wie der Termin-Streifen unten auch.
 function zeichneGeburtstage(){
@@ -815,10 +826,10 @@ function zeichneGeburtstage(){
   const refKey=dateKey(state.selectedDate);
   const liste=geburtstagsKinder(refKey);
   el.style.display=liste.length?'flex':'none';
-  el.innerHTML=liste.map(name=>{
-    const g=(state.employeeDates||{})[name].geburtstag.split('-');
-    return `<div class="gb"><span class="gb-text">Happy Birthday ${esc(name)} 🥳</span>`
-      +`<span class="gb-datum">${g[2]}.${g[1]}.</span></div>`;
+  el.innerHTML=liste.map(g=>{
+    const t=String(g.tag).slice(-5);
+    return `<div class="gb"><span class="gb-text">Happy Birthday ${esc(g.name)} 🥳</span>`
+      +`<span class="gb-datum">${t.slice(3)}.${t.slice(0,2)}.</span></div>`;
   }).join('');
 }
 
@@ -828,13 +839,23 @@ function zeichneGeburtstage(){
 // die Liste im Aufenthaltsraum mit Künftigem zuwächst. Maßstab ist der
 // gezeigte Tag — blättert jemand vor, sieht er, was dort stehen wird.
 function aufgabeFaellig(a,bezug){return !a.ab || a.ab <= dateKey(bezug||state.selectedDate);}
+// Abgehakt bleibt bis zum Tagesende stehen - wer am Nachmittag vorbeigeht,
+// soll sehen, dass es erledigt ist. Am nächsten Morgen ist die Liste wieder
+// sauber. Gelöscht wird nichts: im Management bleiben die erledigten
+// Aufgaben unter "Erledigte zeigen" erhalten.
+function aufgabeZeigen(a,bezug){
+  if(!aufgabeFaellig(a,bezug))return false;
+  if(!a.erledigt)return true;
+  if(!a.erledigtAm)return false;          // vor dieser Regel abgehakt
+  return dateKey(new Date(a.erledigtAm)) >= dateKey(bezug||state.selectedDate);
+}
 function istSpaet(a){return !a.erledigt && !!a.termin && a.termin < dateKey(new Date());}
 function personen(a){return Array.isArray(a.zugewiesen)?a.zugewiesen:(a.zugewiesen?[a.zugewiesen]:[]);}
 
 function zeichneAufgaben(){
   const el=document.getElementById('aufgabenListe'); if(!el)return;
   const bezug=state.selectedDate;
-  const liste=Object.entries(state.aufgaben||{}).filter(([,a])=>aufgabeFaellig(a,bezug)).sort((a,b)=>{
+  const liste=Object.entries(state.aufgaben||{}).filter(([,a])=>aufgabeZeigen(a,bezug)).sort((a,b)=>{
     const A=a[1],B=b[1];
     if(!!A.erledigt!==!!B.erledigt)return A.erledigt?1:-1;
     const at=A.termin||'9999-99-99', bt=B.termin||'9999-99-99';
