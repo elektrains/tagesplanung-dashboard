@@ -280,6 +280,35 @@ body{
   <div class="loader-sub" id="loaderSub"></div>
 </div>
 
+<script>
+// Bleibt die Seite bei "Verbinde…" stehen, sieht man an der Wand nicht warum.
+// Diese Zeilen sind bewusst in altem JavaScript geschrieben und stehen in
+// einem eigenen Block: sie laufen auch dann, wenn der Hauptteil der Seite
+// von einer aelteren Browser-Engine gar nicht erst gelesen werden kann.
+(function(){
+  var zeig=function(t){var e=document.getElementById('loaderSub');if(e)e.textContent=t;};
+  window.addEventListener('error',function(ev){
+    var o=ev.filename?' ('+String(ev.filename).split('/').pop()+(ev.lineno?' Zeile '+ev.lineno:'')+')':'';
+    zeig('Fehler: '+(ev.message||'unbekannt')+o);
+  },true);
+  setTimeout(function(){
+    var l=document.getElementById('loader');
+    if(!l||l.style.display==='none')return;
+    var sub=document.getElementById('loaderSub');
+    if(sub&&sub.textContent)return;
+    if(typeof window.firebase==='undefined'){
+      zeig('Die Firebase-Bibliothek wurde nicht geladen — www.gstatic.com ist von hier aus nicht erreichbar.');
+    } else {
+      zeig('Die Anmeldung bei der Datenbank steht aus. Netz da? Uhrzeit des Geraets richtig?');
+    }
+  },10000);
+  setTimeout(function(){
+    var l=document.getElementById('loader');
+    if(l&&l.style.display!=='none')zeig((document.getElementById('loaderSub').textContent||'')+'  ·  '+navigator.userAgent);
+  },12000);
+})();
+</script>
+
 <div class="shell" id="shell" style="display:none">
   <div class="topbar">
     <div class="marke">Infoboard<span>Elektra Ins AG</span></div>
@@ -597,7 +626,7 @@ function zeichnePlan(){
   }
 
   const kopf=leute.map(emp=>{
-    const gs=plan.globalStatus?.[emp]||'';
+    const gs=(plan.globalStatus||{})[emp]||'';
     const f = gs==='absent'?'var(--red)' : gs==='school'?'var(--blue)' : gs==='half'?'var(--yellow)' : 'var(--green)';
     return `<th><div class="kopf-wrap"><div class="kopf-name">${esc(emp)}</div><div class="kopf-punkt" style="background:${f}"></div></div></th>`;
   }).join('');
@@ -606,8 +635,8 @@ function zeichnePlan(){
     const vi=site.vehicle?site.vehicle-1:-1;
     const vn=vi>=0?(state.vehicles[vi]||''):'';
     const zellen=leute.map(emp=>{
-      const gs=plan.globalStatus?.[emp]||'';
-      const a=site.assignments?.[emp]||'';
+      const gs=(plan.globalStatus||{})[emp]||'';
+      const a=(site.assignments||{})[emp]||'';
       let c='mz', m='';
       if(gs==='absent'){c+=' s-absent'; m=a?esc(a):'—';}
       else if(gs==='school'){c+=' s-school'; m=a?esc(a):'S';}
@@ -790,8 +819,9 @@ function ansichtWechseln(v){
     const e=document.getElementById(id); if(!e)return;
     e.style.display = (k===v) ? (k==='plan'?'grid':'flex') : 'none';
   });
-  [['plan','reiterPlan'],['termine','reiterTermine'],['aemtli','reiterAemtli']].forEach(([k,id])=>
-    document.getElementById(id)?.classList.toggle('aktiv',k===v));
+  [['plan','reiterPlan'],['termine','reiterTermine'],['aemtli','reiterAemtli']].forEach(([k,id])=>{
+    const e=document.getElementById(id); if(e)e.classList.toggle('aktiv',k===v);
+  });
   // In den Listen blättert man keine Tage — die Pfeile verschwinden.
   const tn=document.querySelector('.tag-nav'); if(tn)tn.style.display = v==='plan'?'flex':'none';
   if(v==='aemtli')zeichneAemtli();
