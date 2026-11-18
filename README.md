@@ -85,10 +85,15 @@ Anmeldeliste dazugehört. Die Namen der Angemeldeten stehen dort zum Nachlesen.
    Anonym. Ohne das zeigt der Bildschirm „Nur Ansicht"; der Plan erscheint
    trotzdem. Automatische Bereinigung ausgeschaltet lassen.
 2. **Datenbankregeln** — siehe `firebase-regeln.txt`.
-3. **Auf dem Display** — URL Launcher öffnen, Adresse eintragen. Je nach
-   Firmware *App Management → Install Custom App* (Tizen 6.5+) oder
-   *URL Launcher → Install Web App*. Steht er nicht zur Auswahl, zuerst unter
-   *System → Play via* umschalten.
+3. **Auf dem Display** — unter *System → Abspielen mit* auf **Benutzerdefinierte
+   App** stellen, dann *Home → App-Verwaltung → Web-App installieren* und die
+   Adresse oben eintragen (ohne `?scale=`, die Voreinstellung ist 1.6).
+
+   Der Samsung-Installer liest dabei `sssp_config.xml` aus dem Wurzelverzeichnis
+   — eine Datei mit Version, Grösse und Name, mehr nicht. Ohne sie bricht die
+   Installation mit „Custom app not installed" ab, auch wenn die Seite im
+   Browser einwandfrei läuft. Holt der Bildschirm nach einem Deploy die neue
+   Fassung nicht, `<ver>` darin hochzählen und ihn neu starten.
 
 ## Schriftgrösse
 
