@@ -621,7 +621,16 @@ function zeichnePlan(){
   const sites=plan.sites||[];
   if(leute.length===0||sites.length===0){
     el.style.transform='none';
-    el.innerHTML='<div class="leer">'+(leute.length===0?'Keine Mitarbeiter hinterlegt.':'Für diesen Tag ist noch keine Baustelle geplant.')+'</div>';
+    // Warum leer? Ohne diese Unterscheidung sucht man an der Wand im Dunkeln.
+    let txt;
+    if(leute.length===0){
+      txt = (state.employees||[]).length===0
+        ? 'Die Mitarbeiterliste ist noch nicht angekommen — Einstellungen werden geladen.'
+        : 'Alle '+state.employees.length+' Mitarbeiter sind für diesen Tag ausgeblendet.';
+    } else {
+      txt = 'Für diesen Tag ist noch keine Baustelle geplant.';
+    }
+    el.innerHTML='<div class="leer">'+esc(txt)+'</div>';
     return;
   }
 
