@@ -4,7 +4,7 @@ Wandbildschirm für die Werkstatt, vorgesehen im **Hochformat**:
 Tagesplan oben, Aufgaben in der Mitte, Infoboard unten.
 
 Eigenständige App — die Reading-App bleibt unverändert. Läuft auf dem
-Samsung QM55B-T über dessen eingebauten URL Launcher, ohne zusätzlichen PC.
+Samsung QM55B-T über dessen eingebauten Web Browser, ohne zusätzlichen PC.
 Das Gerät ist laut Handbuch für Hochformat freigegeben (max. 15° Neigung).
 
 ```
@@ -85,15 +85,33 @@ Anmeldeliste dazugehört. Die Namen der Angemeldeten stehen dort zum Nachlesen.
    Anonym. Ohne das zeigt der Bildschirm „Nur Ansicht"; der Plan erscheint
    trotzdem. Automatische Bereinigung ausgeschaltet lassen.
 2. **Datenbankregeln** — siehe `firebase-regeln.txt`.
-3. **Auf dem Display** — unter *System → Abspielen mit* auf **Benutzerdefinierte
-   App** stellen, dann *Home → App-Verwaltung → Web-App installieren* und die
-   Adresse oben eintragen (ohne `?scale=`, die Voreinstellung ist 1.6).
+3. **Auf dem Display** — über den eingebauten Web Browser, nicht als
+   installierte App. *Home → App-Verwaltung → Web-App installieren* verlangt
+   ein signiertes Tizen-Paket (`.wgt` mit `config.xml` und zwei Signaturen);
+   eine blosse Adresse samt `sssp_config.xml` reicht dem Installer nicht, er
+   bricht mit „Die App kann nicht heruntergeladen werden" ab.
 
-   Der Samsung-Installer liest dabei `sssp_config.xml` aus dem Wurzelverzeichnis
-   — eine Datei mit Version, Grösse und Name, mehr nicht. Ohne sie bricht die
-   Installation mit „Custom app not installed" ab, auch wenn die Seite im
-   Browser einwandfrei läuft. Holt der Bildschirm nach einem Deploy die neue
-   Fassung nicht, `<ver>` darin hochzählen und ihn neu starten.
+   Stattdessen:
+
+   - *SOURCE → Web Browser → ▲ → Einstell.*: **Startseite** auf
+     *Benutzerdef.* und die Adresse oben eintragen (ohne `?scale=`, die
+     Voreinstellung ist 1.6), **Zoom** 100 %, **Aktualisierungsintervall**
+     30 Min (kehrt von selbst zur Startseite zurück). Unter *Erweiterte
+     Einstellungen → Allgemein*: Registerkarten und Werkzeugleiste
+     automatisch ausblenden, Cursor im Touch-Modus ausblenden.
+   - *HOME → Startbildschirm anpassen* (PIN, Standard `000000`): **Web
+     Browser** als Anwendung für den Custom-Home-Modus wählen. Damit startet
+     der Bildschirm von selbst im Browser auf der Startseite.
+   - *System → Netzsteuerung → Auto. Einschalten: Ein* — kommt nach einem
+     Stromunterbruch ohne Fernbedienung hoch. Tageszeiten über
+     *HOME → Automatisch Ein/Aus*, dort *Quelle* ebenfalls auf Web Browser.
+
+   Touch braucht Kabel: im Karton liegen zwei **TOUCH OUT**-Kabel. Für den
+   internen Player **TOUCH OUT SCREEN** mit **USB 1** oder **USB 2** am Gerät
+   selbst verbinden, dann *System → Touch-Steuer. → Ein*. Das Handbuch schränkt
+   ein, dass Touch ausserhalb von OSD- und Administratormenü nicht zugesichert
+   ist — bedient wird dann vom Telefon aus oder über einen PC an HDMI
+   (**TOUCH OUT PC** an den PC).
 
 ## Schriftgrösse
 
