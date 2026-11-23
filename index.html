@@ -142,7 +142,7 @@ body{
 /* Der Plan bekommt hoechstens knapp die halbe Hoehe. Passt die Tabelle
    nicht hinein, wird NUR sie verkleinert (transform), nicht die ganze
    Seite — sonst schrumpften Aufgaben und Infoboard unnoetig mit. */
-.plan-box{overflow:hidden;padding:calc(10px * var(--s)) calc(14px * var(--s));
+.plan-box{overflow:hidden;padding:calc(10px * var(--s)) calc(18px * var(--s));
   max-height:48vh;display:flex;align-items:flex-start;}
 .plan-fit{transform-origin:top left;}
 .plan-table{border-collapse:separate;border-spacing:0;border-radius:var(--radius-lg);
@@ -685,8 +685,24 @@ function planAnpassen(){
   const padY=parseFloat(bs.paddingTop) + parseFloat(bs.paddingBottom);
   const deckel=parseFloat(bs.maxHeight);
   const bh=(isNaN(deckel)?box.clientHeight:deckel) - padY;
-  const tw=t.scrollWidth, th=t.scrollHeight;
+  t.style.width='';
+  // Ungerundet messen: auf ganze Pixel gerundet bliebe rechts ein feiner
+  // Spalt stehen, und genau um den geht es hier.
+  const masse=()=>{const r=t.getBoundingClientRect();return [r.width,r.height];};
+  let [tw,th]=masse();
   if(tw<=0||th<=0||bw<=0||bh<=0)return;
+  // Begrenzt die Hoehe, bliebe rechts ein Streifen leer - der Plan stuende
+  // dann schmaler da als Aemtli, Aufgaben und Termine darunter. Also wird
+  // die Tabelle vorher so breit gezogen, dass sie nach dem Verkleinern
+  // genau den Kasten fuellt. Breiter heisst mehr Platz fuer die
+  // Baustellennamen, nicht groessere Schrift. Weil weniger Umbrueche die
+  // Tabelle flacher machen, braucht es zwei Durchgaenge.
+  for(let i=0;i<3;i++){
+    const kb=bw/tw, kh=bh/th;
+    if(kb<=kh+0.002)break;
+    t.style.width=(bw/Math.min(kb,kh))+'px';
+    [tw,th]=masse();
+  }
   const k=Math.min(bw/tw, bh/th);
   fit.style.transform='scale('+k+')';
   fit.style.marginBottom=Math.round(th*(k-1))+'px';
